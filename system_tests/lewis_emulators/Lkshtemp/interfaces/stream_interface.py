@@ -14,7 +14,19 @@ class LkshtempStreamInterface(StreamInterface):
         super(LkshtempStreamInterface, self).__init__()
         # Commands that we expect via serial during normal operation
         self.commands = {
-            CmdBuilder(self.catch_all).arg("^#9.*$").build()  # Catch-all command for debugging
+            CmdBuilder(self.catch_all).arg("^#9.*$").build(),  # Catch-all command for debugging
+            CmdBuilder(self.get_temp).escape("*KRDG? ").string().eos().build(),  # Get Temperature reading in Kelvin
+            CmdBuilder(self.get_id).escape("*IDN?").eos().build(),  # Get ID
+            CmdBuilder(self.get_cmode).escape("CMODE? ").int().eos().build(),  # Get CMODE
+            CmdBuilder(self.get_range).escape("RANGE? ").int().eos().build(),  # Get Output Range
+            CmdBuilder(self.get_setp).escape("SETP? ").int().eos().build(), # Get Setpoint
+            CmdBuilder(self.get_htr).escape("HTR? ").int().eos().build(), # Get Heater readout
+            CmdBuilder(self.get_srdg).escape("SRDG? ").string().eos().build(), # Get Sensort Measure Units
+
+
+            CmdBuilder(self.set_tset).escape("SETP ").int().escape(",").float().eos().build(), # Set Setpoint
+            CmdBuilder(self.set_range).escape("RANGE ").int().escape(",").int().eos().build(), # Set Heater Range
+
         }
 
     def handle_error(self, request, error):
@@ -30,3 +42,15 @@ class LkshtempStreamInterface(StreamInterface):
 
     def catch_all(self, command):
         pass
+
+    def get_id(self):
+        return "LSCI,{}".format(self.device.id)
+    
+    def get_temp(self, output):
+        return self.device.get_output_setpoint(output)
+
+    def get_cmode(self, output):
+        return self.device.get_cmode(output)
+    
+    def get_range(self, output):
+        return self.device.get_output_range(output)
