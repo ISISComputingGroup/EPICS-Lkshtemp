@@ -1,0 +1,40 @@
+# Simulation records for PVs in lakeshore_input.template
+#
+#############################################################
+
+record(ai, "$(P):SIM:TEMP_$(INPUT)") {
+}
+
+
+record(ai, "$(P):SIM:RAW_VOLT_$(INPUT)") {
+}
+
+
+record(stringin, "$(P):SIM:NAME_$(INPUT)") {
+}
+alias("$(P):SIM:NAME_$(INPUT)", "$(P):SIM:NAME_$(INPUT):SP")
+alias("$(P):SIM:NAME_$(INPUT)", "$(P):SIM:NAME_$(INPUT):SP:RBV")
+
+
+record(bi, "$(P):SIM:ALARM_$(INPUT):HIGH") {
+}
+
+
+record(bi, "$(P):SIM:ALARM_$(INPUT):SP:RBV_DO") {
+}
+
+
+record(mbbiDirect, "$(P):SIM:READING_$(INPUT):STAT") {
+}
+
+
+record(longin, "$(P):SIM:CURVE_$(INPUT):NUM") {
+}
+
+
+record(bi, "$(P):SIM:CURVE_$(INPUT):HEAD_DO") {
+}
+
+
+record(bi, "$(P):SIM:IN_$(INPUT):TYPE_DO") {
+}

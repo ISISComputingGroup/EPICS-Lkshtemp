@@ -1,0 +1,12 @@
+# Simulation records for PVs in lakeshore336loop.template
+#
+#############################################################
+
+record(ai, "$(P):SIM:HEATER$(OUT):OUTPUT") {
+}
+
+
+record(longin, "$(P):SIM:HEATER$(OUT):RAW_STAT") {
+}
+
+

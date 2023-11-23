@@ -1,0 +1,547 @@
+#
+# Template to provide the records required for an input. 
+# This makes use of the macros required by lakeshore336.template
+# but also requires macros to specify the input channel.
+#
+# For some commands, I hard coded the last part of the record names into 
+# the protocol file. This seems the easiest way to deal with commands
+# will lots of params returned back, and avoid problematic long INP fields. 
+# For the ZONE commands I used waveforms and subarrays, but that is not as simple.
+#
+# Macros:
+#   P - Prefix for PV name
+#   PORT - Bus/Port Address (eg. ASYN Port).
+#   ADDR - Address on the bus (optional)
+#   TEMPSCAN - SCAN rate for the temperature/voltage readings
+#   SCAN - SCAN rate for non-temperature/voltage parameters.
+#   INPUT - A to D
+
+##
+## Alarm summary record for input
+## This summarizes the software limits on the temperature readings,
+## the alarm status reading from the controller and the input reading status.
+##
+record(calc, "$(P):ALARM_$(INPUT):SUMMARY_CALC") {
+  field(INPA, "$(P):TEMP_$(INPUT) CP MS")
+  field(INPB, "$(P):ALARM_$(INPUT):HIGH CP MS")
+  field(INPC, "$(P):ALARM_$(INPUT):LOW CP MS")
+  field(INPD, "$(P):READING_$(INPUT):INVALID CP MS")
+  field(INPE, "$(P):READING_$(INPUT):TEMP_UNDER CP MS")
+  field(INPF, "$(P):READING_$(INPUT):TEMP_OVER CP MS")
+  field(INPG, "$(P):READING_$(INPUT):SENS_ZERO CP MS")
+  field(INPH, "$(P):READING_$(INPUT):SENS_OVER CP MS")
+  field(CALC, "A")
+  field(FLNK, "$(P):ALARM_$(INPUT):SUMMARY_CALC2")
+  field(SDIS, "$(P):DISABLE")
+}
+
+record(calcout, "$(P):ALARM_$(INPUT):SUMMARY_CALC2") {
+  field(INPA, "$(P):ALARM_$(INPUT):SUMMARY_CALC.STAT")
+  field(CALC, "A!=0?1:0")
+  field(DOPT, "Use CALC")
+  field(OOPT, "Every Time")
+  field(OUT, "$(P):ALARM_$(INPUT):SUMMARY PP")
+}
+
+record(bi, "$(P):ALARM_$(INPUT):SUMMARY") {
+  field(DESC, "Input $(INPUT) Alarm Summary")
+  field(ZNAM, "No Alarm")
+  field(ONAM, "Alarm")
+  field(OSV, "MAJOR")
+  field(PINI, "YES")
+  field(VAL, "0")  
+  info(INTEREST, "HIGH")
+}
+
+##
+## If we disable polling this input, disable the alarm
+##
+record(calcout, "$(P):ALARM_$(INPUT):SUMMARY:DISABLE") {
+  field(INPA, "$(P):DISABLE CP")
+  field(CALC, "A==1?0:1")
+  field(DOPT, "Use CALC")
+  field(OOPT, "When Zero")
+  field(OUT, "$(P):ALARM_$(INPUT):SUMMARY.VAL PP")
+}
+	
+
+## 
+## Read the temperature on this channel in Kelvin.
+##
+record(ai, "$(P):TEMP_$(INPUT)") {
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(DESC, "Input $(INPUT) Temperature Reading")
+  field(INP, "@ls336.proto getKRDG($(INPUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(TEMPSCAN) second")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(HHSV,"MAJOR")
+  field(HSV, "MINOR")
+  field(LSV, "MINOR")
+  field(LLSV,"MAJOR")
+  field(HYST,"1.0")
+  field(HIHI,"1000")
+  field(HIGH,"1000")
+  field(LOW,"-1")
+  field(LOLO,"-1")  
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:TEMP_$(INPUT)")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+## 
+## Hold the temperature setpoint on this channel in Kelvin.
+## The actual set happens in the output
+## This way, when a block points at the temperature for this input, it can be set too
+##
+record(ao, "$(P):TEMP_$(INPUT):SP") {
+  field(DESC, "Set Input $(INPUT) Temperature Setpoint")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(FLNK, "$(P):TEMP_$(INPUT):SP_WAS_PROC")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## Hold the temperature setpoint readback on this channel in Kelvin.
+## The actual RBV is in the output and gets pushed here
+## This is for completeness, as we have TEMP_X and TEMP_X:SP, so we have also TEMP_X:SP:RBV
+##
+record(ai, "$(P):TEMP_$(INPUT):SP:RBV") {
+  field(DESC, "Input $(INPUT) Temperature Setpoint Readback")
+  field(PREC, "3")
+  field(EGU, "K")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## Flag when the SP above has processed, even if value is unchanged,
+## because output needs to know even if the value hasn't changed
+##
+record(calc, "$(P):TEMP_$(INPUT):SP_WAS_PROC") {
+  field(INPA, "$(P):TEMP_$(INPUT):SP_WAS_PROC")
+  field(CALC, "!A")
+}
+
+## 
+## Read the raw voltage on this channel.
+##
+record(ai, "$(P):RAW_VOLT_$(INPUT)") {
+  field(DESC, "Input $(INPUT) Raw voltage Reading")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getSRDG($(INPUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(TEMPSCAN) second")
+  field(PREC, "3")
+  field(EGU, "V")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:RAW_VOLT_$(INPUT)")
+  info(archive, "VAL")
+}
+
+##
+## Set sensor name 
+##
+record(stringout, "$(P):NAME_$(INPUT):SP") {
+  field(DESC, "Set Input $(INPUT) Name")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setINNAME($(INPUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):NAME_$(INPUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:NAME_$(INPUT):SP")
+  info(INTEREST, "HIGH")
+}
+
+## 
+## Read input sensor name
+##
+record(stringin, "$(P):NAME_$(INPUT)") {
+  field(DESC, "Read Input $(INPUT) Name")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getINNAME($(INPUT)) $(PORT) $(ADDR)")
+  field(PINI, "YES")
+  field(SCAN, "Passive")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:NAME_$(INPUT)")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):NAME_$(INPUT)", "$(P):NAME_$(INPUT):SP:RBV")
+
+##
+## Read the high alarm status for this input channel.
+## This also populates ALARM_$(INPUT):LOW
+##
+record(bi, "$(P):ALARM_$(INPUT):HIGH") {
+  field(DESC, "Input $(INPUT) High Alarm Status")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getALARMST($(INPUT),$(P):ALARM_$(INPUT):LOW) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(OSV, "MAJOR")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:ALARM_$(INPUT):HIGH")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## Read the low alarm status for this input channel
+##
+record(bi, "$(P):ALARM_$(INPUT):LOW") {
+  field(DESC, "Input $(INPUT) Low Alarm Status")
+  field(DTYP, "Soft Channel")	   
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## Read the alarm parameters.
+## NOTE: reads values into the inputs of a CALC record 
+##
+record(bi, "$(P):ALARM_$(INPUT):SP:RBV_DO") {
+  field(DESC, "Read Alarm Settings Input $(INPUT)")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getALARM($(INPUT),$(P):ALARM_$(INPUT):SP:RBV_BUFF) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:ALARM_$(INPUT):SP:RBV_DO")
+}
+
+record(calc, "$(P):ALARM_$(INPUT):SP:RBV_BUFF") {
+  field(CALC, "0")
+}
+
+##
+## Read the rest of the alarm params.
+##
+record(bi, "$(P):ALARM_$(INPUT):ON") {
+  field(DESC, "Input $(INPUT) Alarm Enabled Setting")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.A CP")
+  field(ZNAM, "Disabled")
+  field(ONAM, "Enabled")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(ai, "$(P):ALARM_$(INPUT):HIVAL") {
+  field(DESC, "Input $(INPUT) Alarm High Setpoint")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.B CP")
+  field(EGU, "K")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(ai, "$(P):ALARM_$(INPUT):LOVAL") {
+  field(DESC, "Input $(INPUT) Alarm Low Setpoint")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.C CP")
+  field(EGU, "K")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(ai, "$(P):ALARM_$(INPUT):DEADBAND") {
+  field(DESC, "Input $(INPUT) Alarm Deadband Setting")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.D CP")
+  field(EGU, "K")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):ALARM_$(INPUT):LATCHED") {
+  field(DESC, "Input $(INPUT) Alarm Latching Setting")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.E CP")
+  field(ZNAM, "Non Latching")
+  field(ONAM, "Latching")
+  info(INTEREST, "HIGH")
+}
+
+record(bi, "$(P):ALARM_$(INPUT):AUDIBLE") {
+  field(DESC, "Input $(INPUT) Alarm Audible Setting")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.F CP")
+  field(ZNAM, "Quiet")
+  field(ONAM, "Audible")
+  info(INTEREST, "HIGH")
+}
+
+record(bi, "$(P):ALARM_$(INPUT):VISIBLE") {
+  field(DESC, "Input $(INPUT) Alarm Visible Setting")
+  field(INP, "$(P):ALARM_$(INPUT):SP:RBV_BUFF.G CP")
+  field(ZNAM, "Non Visible")
+  field(ONAM, "Visible")
+  info(INTEREST, "HIGH")
+}
+
+
+##
+## Read the input reading status
+##
+record(mbbiDirect, "$(P):READING_$(INPUT):STAT") {
+  field(DESC, "Input $(INPUT) Reading Status")
+  field(SDIS, "$(P):DISABLE")
+  field(SCAN, "$(TEMPSCAN) second")  
+  field(DTYP, "stream")
+  field(INP, "@ls336.proto getRDGST($(INPUT)) $(PORT) $(ADDR)")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:READING_$(INPUT):STAT")
+}
+
+record(bi, "$(P):READING_$(INPUT):INVALID") {
+  field(DESC, "Input $(INPUT) Reading Invalid")
+  field(INP, "$(P):READING_$(INPUT):STAT.B0 CP")
+  field(ZNAM, "Valid")
+  field(ONAM, "Invalid")
+  field(ZSV, "NO_ALARM")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):READING_$(INPUT):TEMP_UNDER") {
+  field(DESC, "Input $(INPUT) Temperature Underrange")
+  field(INP, "$(P):READING_$(INPUT):STAT.B4 CP")
+  field(ZNAM, "Valid")
+  field(ONAM, "Temp Underrange")
+  field(ZSV, "NO_ALARM")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):READING_$(INPUT):TEMP_OVER") {
+  field(DESC, "Input $(INPUT) Temperature Overrange")
+  field(INP, "$(P):READING_$(INPUT):STAT.B5 CP")
+  field(ZNAM, "Valid")
+  field(ONAM, "Temp Overrange")
+  field(ZSV, "NO_ALARM")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):READING_$(INPUT):SENS_ZERO") {
+  field(DESC, "Input $(INPUT) Sensor Units Zero")
+  field(INP, "$(P):READING_$(INPUT):STAT.B6 CP")
+  field(ZNAM, "Valid")
+  field(ONAM, "Sensor Units Zero")
+  field(ZSV, "NO_ALARM")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):READING_$(INPUT):SENS_OVER") {
+  field(DESC, "Input $(INPUT) Sensor Units Overrange")
+  field(INP, "$(P):READING_$(INPUT):STAT.B7 CP")
+  field(ZNAM, "Valid")
+  field(ONAM, "Sensor Units Overrange")
+  field(ZSV, "NO_ALARM")
+  field(OSV, "MAJOR")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+
+##
+## Read the input curve number
+##
+record(longin, "$(P):CURVE_$(INPUT):NUM") {
+  field(DESC, "Input $(INPUT) Curve Number")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(SCAN, "$(SCAN) second")  
+  field(INP, "@ls336.proto getINCRV($(INPUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):CURVE_$(INPUT):HEAD_DO")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:CURVE_$(INPUT):NUM")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## Read the input curve header.
+## NOTE: reads values into the inputs of a scalcout record 
+##
+record(bi, "$(P):CURVE_$(INPUT):HEAD_DO") {
+  field(DESC, "Read Input $(INPUT) Curve Header")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getCRVHDR($(P):CURVE_$(INPUT),NUM,HEAD_BUFF) $(PORT) $(ADDR)")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:CURVE_$(INPUT):HEAD_DO")
+}
+
+record(scalcout, "$(P):CURVE_$(INPUT):HEAD_BUFF") {
+	field(CALC, "0")
+}
+
+##
+## Read the rest of the input curve header.
+##
+record(stringin, "$(P):CURVE_$(INPUT):NAME") {
+  field(DESC, "Input $(INPUT) Curve Name")
+  field(INP, "$(P):CURVE_$(INPUT):HEAD_BUFF.AA CP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(stringin, "$(P):CURVE_$(INPUT):SERIAL_N") {
+  field(DESC, "Input $(INPUT) Curve Serial Number")
+  field(INP, "$(P):CURVE_$(INPUT):HEAD_BUFF.BB CP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(mbbi, "$(P):CURVE_$(INPUT):FORMAT") {
+  field(DESC, "Input $(INPUT) Curve Data Format")
+  field(INP, "$(P):CURVE_$(INPUT):HEAD_BUFF.A CP")
+  field(ZRVL, "0")
+  field(ZRST, "Unknown")
+  field(ONVL, "1")
+  field(ONST, "mV/K")
+  field(TWVL, "2")
+  field(TWST, "V/K")
+  field(THVL, "3")
+  field(THST, "Ohm/K")
+  field(FRVL, "4")
+  field(FRST, "log Ohm/K")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(ai, "$(P):CURVE_$(INPUT):LIM") {
+  field(DESC, "Input $(INPUT) Curve Temperature Limit")
+  field(INP, "$(P):CURVE_$(INPUT):HEAD_BUFF.B CP")
+  field(EGU, "K")
+  field(PREC, "3")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(mbbi, "$(P):CURVE_$(INPUT):COEFF") {
+  field(DESC, "Input $(INPUT) Curve Temperature Coefficient")
+  field(INP, "$(P):CURVE_$(INPUT):HEAD_BUFF.C CP")
+  field(ZRVL, "0")
+  field(ZRST, "Unknown")
+  field(ONVL, "1")
+  field(ONST, "Negative")
+  field(TWVL, "2")
+  field(TWST, "Positive")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+
+## 
+## Read the input type information.
+## NOTE: reads values into the inputs of a calc record 
+##
+record(bi, "$(P):IN_$(INPUT):TYPE_DO") {
+  field(DESC, "Read Input Type Params")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getINTYPE($(INPUT),$(P):IN_$(INPUT):TYPE_BUFF) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:IN_$(INPUT):TYPE_DO")
+}
+
+record(calc, "$(P):IN_$(INPUT):TYPE_BUFF") {
+  field(CALC, "0")
+}
+
+##
+## Read the rest of the input type params.
+## NOTE: the last part of the record names are hard coded into protocol file. 
+##
+record(mbbi, "$(P):IN_$(INPUT):SENS_TYPE") {
+  field(DESC, "Input $(INPUT) Sensor Type")
+  field(INP, "$(P):IN_$(INPUT):TYPE_BUFF.A CP")
+  field(ZRST, "Disabled")
+  field(ZRVL, "0")
+  field(ONST, "Diode")
+  field(ONVL, "1")
+  field(TWST, "Platinum RTD")
+  field(TWVL, "2")
+  field(THST, "NTC RTD")
+  field(THVL, "3")
+  field(FRST, "Thermocouple")
+  field(FRVL, "4")
+  field(FVST, "Capacitance")
+  field(FVVL, "5")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):IN_$(INPUT):AUTORANGE") {
+  field(DESC, "Input $(INPUT) Auto Range Setting")
+  field(INP, "$(P):IN_$(INPUT):TYPE_BUFF.B CP")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(mbbi, "$(P):IN_$(INPUT):RANGE") {
+  field(DESC, "Input $(INPUT) Range")
+  field(INP, "$(P):IN_$(INPUT):TYPE_BUFF.C CP")
+  field(ZRST, "10 Ohm / 2.5V / 50mV")
+  field(ZRVL, "0")
+  field(ONST, "30 Ohm / 10V")
+  field(ONVL, "1")
+  field(TWST, "100 Ohm")
+  field(TWVL, "2")
+  field(THST, "300 Ohm")
+  field(THVL, "3")
+  field(FRST, "1 KOhm")
+  field(FRVL, "4")
+  field(FVST, "3 KOhm")
+  field(FVVL, "5")
+  field(SXST, "10 KOhm")
+  field(SXVL, "6")
+  field(SVST, "30 KOhm")
+  field(SVVL, "7")
+  field(EIST, "100 KOhm")
+  field(EIVL, "8")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(bi, "$(P):IN_$(INPUT):COMPENSATION") {
+  field(DESC, "Input $(INPUT) Compensation)")
+  field(INP, "$(P):IN_$(INPUT):TYPE_BUFF.D CP")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+record(mbbi, "$(P):IN_$(INPUT):UNITS") {
+  field(DESC, "Input $(INPUT) Units")
+  field(INP, "$(P):IN_$(INPUT):TYPE_BUFF.E CP")
+  field(ZRST, "None")
+  field(ZRVL, "0")
+  field(ONST, "Kelvin")
+  field(ONVL, "1")
+  field(TWST, "Celcius")
+  field(TWVL, "2")
+  field(THST, "Sensor")
+  field(THVL, "3")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+

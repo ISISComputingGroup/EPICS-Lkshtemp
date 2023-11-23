@@ -1,0 +1,86 @@
+# Simulation records for PVs in lakeshore336output.template
+#
+#############################################################
+
+record(ai, "$(P):SIM:TEMP$(OUT):SP") {
+}
+alias("$(P):SIM:TEMP$(OUT):SP", "$(P):SIM:TEMP$(OUT):SP:RBV")
+
+
+record(ai, "$(P):SIM:RAMP_RATE$(OUT)") {
+}
+alias("$(P):SIM:RAMP_RATE$(OUT)", "$(P):SIM:RAMP_RATE$(OUT):SP")
+alias("$(P):SIM:RAMP_RATE$(OUT)", "$(P):SIM:RAMP_RATE$(OUT):SP:RBV")
+
+
+record(bi, "$(P):SIM:RAMP_ON$(OUT)") {
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+}
+alias("$(P):SIM:RAMP_ON$(OUT)", "$(P):SIM:RAMP_ON$(OUT):SP")
+alias("$(P):SIM:RAMP_ON$(OUT)", "$(P):SIM:RAMP_ON$(OUT):SP:RBV")
+
+
+record(mbbi, "$(P):SIM:HEATER$(OUT):RANGE") {
+}
+alias("$(P):SIM:HEATER$(OUT):RANGE", "$(P):SIM:HEATER$(OUT):RANGE:SP")
+alias("$(P):SIM:HEATER$(OUT):RANGE", "$(P):SIM:HEATER$(OUT):RANGE:SP:RBV")
+
+
+record(ai, "$(P):SIM:MANUAL_OUT$(OUT)") {
+}
+alias("$(P):SIM:MANUAL_OUT$(OUT)", "$(P):SIM:MANUAL_OUT$(OUT):SP")
+alias("$(P):SIM:MANUAL_OUT$(OUT)", "$(P):SIM:MANUAL_OUT$(OUT):SP:RBV")
+
+
+record(ai, "$(P):SIM:P$(OUT)") {
+}
+alias("$(P):SIM:P$(OUT)", "$(P):SIM:P$(OUT):SP")
+alias("$(P):SIM:P$(OUT)", "$(P):SIM:P$(OUT):SP:RBV")
+
+
+record(ai, "$(P):SIM:I$(OUT)") {
+}
+alias("$(P):SIM:I$(OUT)", "$(P):SIM:I$(OUT):SP")
+alias("$(P):SIM:I$(OUT)", "$(P):SIM:I$(OUT):SP:RBV")
+
+
+record(ai, "$(P):SIM:D$(OUT)") {
+}
+alias("$(P):SIM:D$(OUT)", "$(P):SIM:D$(OUT):SP")
+alias("$(P):SIM:D$(OUT)", "$(P):SIM:D$(OUT):SP:RBV")
+
+
+record(mbbi, "$(P):SIM:OUT_MODE$(OUT)") {
+}
+alias("$(P):SIM:OUT_MODE$(OUT)", "$(P):SIM:OUT_MODE$(OUT):SP")
+alias("$(P):SIM:OUT_MODE$(OUT)", "$(P):SIM:OUT_MODE$(OUT):SP:RBV")
+
+
+record(mbbi, "$(P):SIM:CTRL_IN$(OUT)") {
+}
+alias("$(P):SIM:CTRL_IN$(OUT)", "$(P):SIM:CTRL_IN$(OUT):SP")
+alias("$(P):SIM:CTRL_IN$(OUT)", "$(P):SIM:CTRL_IN$(OUT):SP:RBV")
+
+
+record(bi, "$(P):SIM:POWERUP$(OUT)") {
+}
+alias("$(P):SIM:POWERUP$(OUT)", "$(P):SIM:POWERUP$(OUT):SP")
+alias("$(P):SIM:POWERUP$(OUT)", "$(P):SIM:POWERUP$(OUT):SP:RBV")
+
+record(ao, "$(P):SIM:AUTOTUNE_START$(OUT)") {
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

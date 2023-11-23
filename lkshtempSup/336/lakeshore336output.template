@@ -1,0 +1,754 @@
+# This template is for the common functionality shared by all 4 outputs.
+#
+# There is some logic in this database to provide put_callback functionality
+# for setting the temperature and waiting for it to be in range. The input
+# sensor PV name used for the in-window calculation changes depending on
+# the input sensor selected. In order for this to work it requires the following
+# macros:
+#
+#   P - Prefix for PV name
+#   PORT - Bus/Port Address (eg. ASYN Port).
+#   ADDR - Address on the bus (optional)
+#   TEMPSCAN - SCAN rate for the temperature/voltage readings
+#   SCAN - SCAN rate for non-temperature/voltage parameters.
+#   TOLERANCE (optional - defaults to 1)
+#
+# Notes: The loop/output dependant PVs are in a seperate template file.
+#        Generally, set records forward process the associated read records in order
+#        to update the read record faster than their SCAN rate otherwise would do (but they
+#        are not processed in the same processing chain).
+
+################################################################
+# Read records
+################################################################
+
+##
+## Record holding the output number
+##
+record(stringout, "$(P):OUTPUT$(OUT)") {
+  field(DESC, "Output Number")
+  field(DTYP, "Soft Channel")
+  field(VAL, "$(OUT)")
+  field(PINI, "YES")
+}
+
+## 
+## Read the setpoint temperature.
+##
+record(ai, "$(P):TEMP$(OUT):SP:RBV") {
+  field(DESC, "Output $(OUT) Setpoint Temperature Readback")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getSETP($(OUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(TEMPSCAN) second")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:TEMP$(OUT):SP:RBV")
+  field(FLNK, "$(P):PUSH_TEMP$(OUT):SP:RBV")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## A few records to push the setpoint RBV to the corresponding PV in the input
+##
+record(calcout, "$(P):SELECT_WHICH_TEMP$(OUT):SP:RBV") {
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(CALC, "A<=4 ? A+1 : 1")
+  field(OUT, "$(P):PUSH_TEMP$(OUT):SP:RBV.SELN PP")
+}
+
+record(ai, "$(P):DUMMY_TEMP$(OUT):SP:RBV") {
+  field(DESC, "Dummy to use when CtrlInput is None")
+}
+
+record(seq, "$(P):PUSH_TEMP$(OUT):SP:RBV") {
+  field(DOL1, "$(P):TEMP$(OUT):SP:RBV CP")
+  field(LNK1, "$(P):DUMMY_TEMP$(OUT):SP:RBV PP")
+  field(DOL2, "$(P):TEMP$(OUT):SP:RBV")
+  field(LNK2, "$(P):TEMP_A:SP:RBV PP")
+  field(DOL3, "$(P):TEMP$(OUT):SP:RBV")
+  field(LNK3, "$(P):TEMP_B:SP:RBV PP")
+  field(DOL4, "$(P):TEMP$(OUT):SP:RBV")
+  field(LNK4, "$(P):TEMP_C:SP:RBV PP")
+  field(DOL5, "$(P):TEMP$(OUT):SP:RBV")
+  field(LNK5, "$(P):TEMP_D:SP:RBV PP")
+  field(SELM, "Specified")
+}
+
+##
+## A few records to fetch the temperature read on the corresponding input channel
+## This is so users can define a block as TEMP_1
+##
+record(calcout, "$(P):SELECT_WHICH_TEMP$(OUT)") {
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(CALC, "A<=4 ? A : 0")
+  field(OUT, "$(P):FETCH_TEMP$(OUT).SELN PP")
+}
+
+record(ai, "$(P):DUMMY_TEMP$(OUT)") {
+  field(DESC, "Dummy to use when CtrlInput is None")
+}
+
+record(sel, "$(P):FETCH_TEMP$(OUT)") {
+  field(INPA, "$(P):DUMMY_TEMP$(OUT)")
+  field(INPB, "$(P):TEMP_A CP")
+  field(INPC, "$(P):TEMP_B CP")
+  field(INPD, "$(P):TEMP_C CP")
+  field(INPE, "$(P):TEMP_D CP")
+  field(SELM, "Specified")
+  field(FLNK, "$(P):TEMP$(OUT)")
+}
+
+record(ai, "$(P):TEMP$(OUT)") {
+  field(DESC, "Output $(OUT) Temperature Reading")
+  field(INP, "$(P):FETCH_TEMP$(OUT)")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(HHSV,"MAJOR")
+  field(HSV, "MINOR")
+  field(LSV, "MINOR")
+  field(LLSV,"MAJOR")
+  field(HIHI,"1000")
+  field(HIGH,"1000")
+  field(LOW,"-1")
+  field(LOLO,"-1")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+## 
+## Read the ramp rate parameter. This also populates the ramp status $(P):RAMP_ON$(OUT),
+##
+record(ai, "$(P):RAMP_RATE$(OUT)") {
+  field(DESC, "Output $(OUT) Ramp Rate")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getRAMP($(OUT),$(P):RAMP_ON$(OUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(PREC, "3")
+  field(EGU, "K/min")  
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:RAMP_RATE$(OUT)")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):RAMP_RATE$(OUT)", "$(P):RAMP_RATE$(OUT):SP:RBV")
+
+## 
+## Read the ramp status parameter.
+##
+## 0=off
+## 1=on
+##
+record(bi, "$(P):RAMP_ON$(OUT)") {
+  field(DESC, "Output $(OUT) Ramp On")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:RAMP_ON$(OUT) CP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):RAMP_ON$(OUT)", "$(P):RAMP_ON$(OUT):SP:RBV")
+
+## 
+## Read the range parameter (the heater output power range).
+## IMPORTANT: This is the part of the record that is common to both output types
+## The strings are output specific and are defined in another file.
+##
+record(mbbi, "$(P):HEATER$(OUT):RANGE") {
+  field(DESC, "Output $(OUT) Heater Output Power Range")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(ZRVL, "0")
+  field(ONVL, "1")
+  field(TWVL, "2")
+  field(THVL, "3")
+  field(FRVL, "4")
+  field(FVVL, "5")
+  field(SCAN, "$(SCAN) second")
+  field(INP, "@ls336.proto getRANGE($(OUT)) $(PORT) $(ADDR)")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:HEATER$(OUT):RANGE")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):HEATER$(OUT):RANGE", "$(P):HEATER$(OUT):RANGE:SP:RBV")
+
+## 
+## Read the manual output parameter.
+##
+record(ai, "$(P):MANUAL_OUT$(OUT)") {
+  field(DESC, "Output $(OUT) Manual Output Parameter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getMOUT($(OUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:MANUAL_OUT$(OUT)")
+  field(EGU, "%")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):MANUAL_OUT$(OUT)", "$(P):MANUAL_OUT$(OUT):SP:RBV")
+
+## 
+## Read the PID P parameter. Pass the I and D records into the protocol to read those as well.
+## Separate out the prefix, to make INP field shorter.
+##
+record(ai, "$(P):P$(OUT)") {
+  field(DESC, "Output $(OUT) PID P Parameter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getPID($(OUT),$(P),I$(OUT),D$(OUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(PREC, "1")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:P$(OUT)")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):P$(OUT)", "$(P):P$(OUT):SP:RBV")
+
+## 
+## Read the PID I parameter.
+##
+record(ai, "$(P):I$(OUT)") {
+  field(DESC, "Output $(OUT) PID I Parameter")
+  field(DTYP, "Soft Channel")
+  field(SCAN, "Passive")
+  field(PREC, "1")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:I$(OUT) CP")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):I$(OUT)", "$(P):I$(OUT):SP:RBV")
+
+## 
+## Read the PID D parameter.
+##
+record(ai, "$(P):D$(OUT)") {
+  field(DESC, "Output $(OUT) PID D Parameter")
+  field(DTYP, "Soft Channel")
+  field(SCAN, "Passive")
+  field(PREC, "1")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:D$(OUT) CP")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):D$(OUT)", "$(P):D$(OUT):SP:RBV")
+
+##
+## Read the mode to use for outmode.
+## This also populates the CTRL_IN and POWERUP records.
+## IMPORTANT: This is the part of the record that is common to both output types
+## The strings are output specific and are defined in another file.
+##
+record(mbbi, "$(P):OUT_MODE$(OUT)") {
+  field(DESC, "Output $(OUT) Output Mode")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(ZRVL, "0")
+  field(ONVL, "1")
+  field(TWVL, "2")
+  field(THVL, "3")
+  field(FRVL, "4")
+  field(FVVL, "5")
+  field(SCAN, "$(SCAN) second")
+  field(INP, "@ls336.proto getOM($(OUT),$(P),CTRL_IN$(OUT),POWERUP$(OUT)) $(PORT) $(ADDR)")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:OUT_MODE$(OUT)")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):OUT_MODE$(OUT)", "$(P):OUT_MODE$(OUT):SP:RBV")
+
+##
+## Read the input to use for outmode
+##
+record(mbbi, "$(P):CTRL_IN$(OUT)") {
+  field(DESC, "Output $(OUT) Control Input")
+  field(DTYP, "Soft Channel")
+  field(ZRST, "None")
+  field(ZRVL, "0")
+  field(ONST, "Measurement A")
+  field(ONVL, "1")
+  field(TWST, "Measurement B")
+  field(TWVL, "2")
+  field(THST, "Measurement C")
+  field(THVL, "3")
+  field(FRST, "Measurement D")
+  field(FRVL, "4")
+  field(FVST, "Measurement D2")
+  field(FVVL, "5")
+  field(SXST, "Measurement D3")
+  field(SXVL, "6")
+  field(SVST, "Measurement D4")
+  field(SVVL, "7")
+  field(EIST, "Measurement D5")
+  field(EIVL, "8")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:CTRL_IN$(OUT) CP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):CTRL_IN$(OUT)", "$(P):CTRL_IN$(OUT):SP:RBV")
+
+##
+## Read the power up mode to use for outmode
+##
+record(bi, "$(P):POWERUP$(OUT)") {
+  field(DESC, "Output $(OUT) Power Up Enable")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:POWERUP$(OUT) CP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+alias("$(P):POWERUP$(OUT)", "$(P):POWERUP$(OUT):SP:RBV")
+
+################################################################
+# Write records
+################################################################
+
+## 
+## Set the setpoint temperature.
+##
+record(ao, "$(P):TEMP$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Temperature Setpoint")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setSETP($(OUT)) $(PORT) $(ADDR)")
+  field(PREC, "3")
+  field(FLNK, "$(P):TEMP$(OUT):SP_BUSYSET.PROC")
+  field(EGU, "K")
+  field(DRVH, "1000")
+  field(DRVL, "0")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:TEMP$(OUT):SP")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+##
+## A few records to fetch the setpoint from that set in the input
+## This way, the user can define a block pointing at the sp in the input file,
+## and setting the block will still work
+## INPC is needed because this has to trigger whenever the input is processed,
+## not just when it changes value! Otherwise if we swap to e.g. INPUT B and then re-set INPUT_B:SP to
+## what it is already, the value doesn't get pushed
+## NOTE: can't do simply with a single sel record, because you still want to
+## trigger only when the relevant PV from the input changes
+##
+
+record(calcout, "$(P):PUSH_SP_$(OUT)_FROM_A") {
+  field(DESC, "Fetch SP$(OUT) from A if needed")
+  field(INPA, "$(P):TEMP_A:SP")
+  field(INPB, "$(P):CTRL_IN$(OUT).VAL")
+  field(INPC, "$(P):TEMP_A:SP_WAS_PROC CP")
+  field(CALC, "B == 1")
+  field(OOPT, "When Non-zero")
+  field(OCAL, "A")
+  field(DOPT, "Use OCAL")
+  field(OUT, "$(P):TEMP$(OUT):SP PP")
+}
+
+record(calcout, "$(P):PUSH_SP_$(OUT)_FROM_B") {
+  field(DESC, "Fetch SP$(OUT) from B if needed")
+  field(INPA, "$(P):TEMP_B:SP")
+  field(INPB, "$(P):CTRL_IN$(OUT).VAL")
+  field(INPC, "$(P):TEMP_B:SP_WAS_PROC CP")
+  field(CALC, "B == 2")
+  field(OOPT, "When Non-zero")
+  field(OCAL, "A")
+  field(DOPT, "Use OCAL")
+  field(OUT, "$(P):TEMP$(OUT):SP PP")
+}
+
+record(calcout, "$(P):PUSH_SP_$(OUT)_FROM_C") {
+  field(DESC, "Fetch SP$(OUT) from C if needed")
+  field(INPA, "$(P):TEMP_C:SP")
+  field(INPB, "$(P):CTRL_IN$(OUT).VAL")
+  field(INPC, "$(P):TEMP_C:SP_WAS_PROC CP")
+  field(CALC, "B == 3")
+  field(OOPT, "When Non-zero")
+  field(OCAL, "A")
+  field(DOPT, "Use OCAL")
+  field(OUT, "$(P):TEMP$(OUT):SP PP")
+}
+
+record(calcout, "$(P):PUSH_SP_$(OUT)_FROM_D") {
+  field(DESC, "Fetch SP$(OUT) from D if needed")
+  field(INPA, "$(P):TEMP_D:SP")
+  field(INPB, "$(P):CTRL_IN$(OUT).VAL")
+  field(INPC, "$(P):TEMP_D:SP_WAS_PROC CP")
+  field(CALC, "B == 4")
+  field(OOPT, "When Non-zero")
+  field(OCAL, "A")
+  field(DOPT, "Use OCAL")
+  field(OUT, "$(P):TEMP$(OUT):SP PP")
+}
+
+###############################################################################
+
+##
+## A few records to support put_callback on the setpoint. We use the busy record.
+## A temperature window is used. The temperature must be within
+## the window, before the callback is done.
+##
+record(dfanout, "$(P):TEMP$(OUT):SP_BUSYSET") {
+   field(VAL, "0")
+   field(OUTA, "$(P):IN_WINDOW$(OUT).VAL PP")
+   field(FLNK, "$(P):TEMP$(OUT):SP_BUSYSET2")
+}
+
+record(dfanout, "$(P):TEMP$(OUT):SP_BUSYSET2") {
+   field(VAL, "1")
+   field(OUTA, "$(P):TEMP$(OUT):SP:RBV.PROC PP")
+   field(OUTB, "$(P):TEMP$(OUT):SP_BUSY PP")
+   field(FLNK, "$(P):CALC_IN_WINDOW$(OUT)")
+}
+
+record(busy, "$(P):TEMP$(OUT):SP_BUSY") {
+}
+
+record(calcout, "$(P):CALC_IN_WINDOW$(OUT)") {
+  field(PINI, "YES")
+  field(INPA, "$(TOLERANCE=1)")
+  field(INPB, "$(P):DUMMY$(OUT).VAL")
+  field(INPC, "$(P):TEMP$(OUT):SP.VAL")
+  field(CALC, "((B>=(C-A))&&(B<=(C+A)))?1:0")
+  field(OOPT, "Every Time")
+  field(OUT, "$(P):IN_WINDOW$(OUT).VAL PP")
+  field(DOPT, "Use CALC")
+  field(SCAN, "1 second")
+  field(PREC, "1") 
+}
+
+record(bo, "$(P):IN_WINDOW$(OUT)") {
+  field(DESC, "Output $(OUT) Temp in Tolerance Window")
+  field(VAL, "0")
+  field(PINI, "YES")
+  field(OMSL, "supervisory")
+  field(ZNAM, "Not In Window")
+  field(ONAM, "In Window")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set busy record 'done' when TIME_WINDOW$(OUT)=1
+##
+record(calcout, "$(P):CALC_BUSY_DONE$(OUT)") {
+  field(INPA, "$(P):IN_WINDOW$(OUT).VAL CP")
+  field(CALC, "(A=1)?0:1")
+  field(OOPT, "Every Time")
+  field(OUT, "$(P):TEMP$(OUT):SP_BUSY.VAL PP")
+}
+
+###############################################################################
+
+##
+## Dummy record to use for input link name default
+## Where used, it will be replaced at runtime with the Temperature Readback
+##
+record(ai, "$(P):DUMMY$(OUT)") {
+}
+
+##
+## Monitor $(P):CTRL_IN$(OUT) to determine which input sensor to use
+## to deal with the callback. The below set of records automatically
+## switch the input when the 'control input' is changed. They make
+## use of the input sensor PV names passed into this template.
+##
+record(calcout, "$(P):SET_$(OUT)_INPUTA") {
+  field(CALC, "A=1")
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(DOPT, "Use OCAL")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P):SET_$(OUT)_INPUTA_LINK.PROC")
+}
+record(stringout, "$(P):SET_$(OUT)_INPUTA_LINK") {
+  field(VAL, "$(P):TEMP_A CP")
+  field(OUT, "$(P):CALC_IN_WINDOW$(OUT).INPB CA")
+}
+
+record(calcout, "$(P):SET_$(OUT)_INPUTB") {
+  field(CALC, "A=2")
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(DOPT, "Use OCAL")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P):SET_$(OUT)_INPUTB_LINK.PROC")
+}
+record(stringout, "$(P):SET_$(OUT)_INPUTB_LINK") {
+  field(VAL, "$(P):TEMP_B CP")
+  field(OUT, "$(P):CALC_IN_WINDOW$(OUT).INPB CA")
+}
+
+record(calcout, "$(P):SET_$(OUT)_INPUTC") {
+  field(CALC, "A=3")
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(DOPT, "Use OCAL")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P):SET_$(OUT)_INPUTC_LINK.PROC")
+}
+record(stringout, "$(P):SET_$(OUT)_INPUTC_LINK") {
+  field(VAL, "$(P):TEMP_C CP")
+  field(OUT, "$(P):CALC_IN_WINDOW$(OUT).INPB CA")
+}
+
+record(calcout, "$(P):SET_$(OUT)_INPUTD") {
+  field(CALC, "A=4")
+  field(INPA, "$(P):CTRL_IN$(OUT).VAL CP")
+  field(DOPT, "Use OCAL")
+  field(OVAL, "1")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P):SET_$(OUT)_INPUTD_LINK.PROC")
+}
+record(stringout, "$(P):SET_$(OUT)_INPUTD_LINK") {
+  field(VAL, "$(P):TEMP_D CP")
+  field(OUT, "$(P):CALC_IN_WINDOW$(OUT).INPB CA")
+}
+
+## 
+## Set the range parameter.
+## IMPORTANT: This is the part of the record that is common to both output types
+## The strings are output specific and are defined in another file.
+##
+record(mbbo, "$(P):HEATER$(OUT):RANGE:SP") {
+  field(DESC, "Set Output $(OUT) Heater Output Power Range")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setRANGE($(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):HEATER$(OUT):RANGE.PROC CA") 
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:HEATER$(OUT):RANGE:SP")
+  info(INTEREST, "HIGH")
+}
+
+## 
+## Set the ramp rate parameter.
+##
+## This is the desired temperate increase/decrease rate
+## per second when heating/cooling.
+##
+## The ramp and ramp status parameters are actually one command
+## for the lakeshore. Therefore one must pass into this
+## record the existing/desired ramp status, as well as the 
+## desired ramp. This is done automatically by reading the 
+## PV which holds the current ramp status.
+##
+record(ao, "$(P):RAMP_RATE$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Ramp Rate")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setRAMP($(P):RAMP_ON$(OUT),$(OUT)) $(PORT) $(ADDR)")
+  field(PREC, "3")
+  field(FLNK, "$(P):RAMP_RATE$(OUT).PROC CA")
+  field(EGU, "K/min")
+  field(DRVH, "100")
+  field(DRVL, "0")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:RAMP_RATE$(OUT):SP")
+  info(INTEREST, "HIGH")
+}
+
+## 
+## Set the ramp status parameter.
+##
+## 0=off
+## 1=on
+##
+## The ramp and ramp status parameters are actually one command
+## for the lakeshore. Therefore one must pass into this
+## record the existing/desired ramp, as well as the 
+## desired ramp status. This is done automatically by reading the 
+## PV which holds the current ramp value.
+##
+record(bo, "$(P):RAMP_ON$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Ramp On")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setRAMPSTATUS($(P):RAMP_RATE$(OUT),$(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):RAMP_RATE$(OUT).PROC CA")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:RAMP_ON$(OUT):SP PP")
+  info(INTEREST, "HIGH")
+}
+
+## 
+## Set the manual output value.
+##
+record(ao, "$(P):MANUAL_OUT$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Manual Output Paramter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setMOUT($(OUT)) $(PORT) $(ADDR)")
+  field(DRVH, "100")
+  field(DRVL, "0")
+  field(FLNK, "$(P):MANUAL_OUT$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:MANUAL_OUT$(OUT):SP")
+  field(EGU, "%")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the PID P parameter.
+##
+record(ao, "$(P):P$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) PID P Parameter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setP($(OUT),$(P),I$(OUT),D$(OUT)) $(PORT) $(ADDR)")
+  field(PREC, "1")
+  field(DRVH, "1000")
+  field(DRVL, "0")
+  field(FLNK, "$(P):P$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:P$(OUT):SP PP")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the PID I parameter.
+##
+record(ao, "$(P):I$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) PID I Parameter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setI($(OUT),$(P),P$(OUT),D$(OUT)) $(PORT) $(ADDR)")
+  field(PREC, "1")
+  field(DRVH, "1000")
+  field(DRVL, "0")
+  field(FLNK, "$(P):P$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:I$(OUT):SP PP")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the PID D parameter.
+##
+record(ao, "$(P):D$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) PID D Parameter")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setD($(OUT),$(P),P$(OUT),I$(OUT)) $(PORT) $(ADDR)")
+  field(PREC, "1")
+  field(DRVH, "200")
+  field(DRVL, "0")
+  field(FLNK, "$(P):P$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:D$(OUT):SP PP")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the mode to use for outmode
+## IMPORTANT: This is the part of the record that is common to both output types
+## The strings are output specific and are defined in another file.
+##
+record(mbbo, "$(P):OUT_MODE$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Output Mode")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(ZRVL, "0")
+  field(ONVL, "1")
+  field(TWVL, "2")
+  field(THVL, "3")
+  field(FRVL, "4")
+  field(FVVL, "5")
+  field(OUT, "@ls336.proto setOM($(OUT),$(P),CTRL_IN$(OUT),POWERUP$(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):OUT_MODE$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:OUT_MODE$(OUT):SP") 
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the input to use for outmode
+##
+record(mbbo, "$(P):CTRL_IN$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Control Input")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(ZRST, "None")
+  field(ZRVL, "0")
+  field(ONST, "Measurement A")
+  field(ONVL, "1")
+  field(TWST, "Measurement B")
+  field(TWVL, "2")
+  field(THST, "Measurement C")
+  field(THVL, "3")
+  field(FRST, "Measurement D")
+  field(FRVL, "4")
+  field(OUT, "@ls336.proto setOMI($(OUT),$(P),OUT_MODE$(OUT),POWERUP$(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):OUT_MODE$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:CTRL_IN$(OUT):SP PP")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the power up mode to use for outmode
+##
+record(bo, "$(P):POWERUP$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Power Up Enable")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(ZNAM, "Off")
+  field(ONAM, "On")
+  field(OUT, "@ls336.proto setOMP($(OUT),$(P),OUT_MODE$(OUT),CTRL_IN$(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):OUT_MODE$(OUT).PROC CA")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:POWERUP$(OUT):SP PP")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Set the type of tuning mode
+##
+record(mbbo, "$(P):AUTOTUNE_MODE$(OUT):SP") {
+  field(DESC, "Set Output $(OUT) Autotune Mode")
+  field(SDIS, "$(P):DISABLE")
+  field(ZRST, "P Only")
+  field(ZRVL, "0")
+  field(ONST, "P and I")
+  field(ONVL, "1")
+  field(TWST, "P, I and D")
+  field(TWVL, "2")
+  info(INTEREST, "HIGH")
+}
+
+## 
+## Start the tuning process
+##
+record(ao, "$(P):AUTOTUNE_START$(OUT)") {
+  field(DESC, "Start Auto Tuning Output $(OUT)")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(OUT, "@ls336.proto setATUNE($(OUT),$(P):AUTOTUNE_MODE$(OUT):SP) $(PORT) $(ADDR)")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:AUTOTUNE_START$(OUT)")
+  field(EGU, "")
+  info(INTEREST, "HIGH")
+}
+

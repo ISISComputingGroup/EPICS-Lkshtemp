@@ -1,0 +1,46 @@
+################################################################
+#
+# Lakeshore 336/350 Temperature Controller template file.
+#
+# Macros:
+#   P - Prefix for PV name
+#   PORT - Bus/Port Address (eg. ASYN Port).
+#   ADDR - Address on the bus (optional)
+#
+#
+# Matt Pearson, June 2013
+#
+################################################################
+
+record(bo, "$(P):SIM") {
+  field(ZNAM, "NO")
+  field(ONAM, "YES")
+  field(VAL, "$(RECSIM=0)")
+}
+
+record(bo, "$(P):DISABLE") {
+  field(DESC, "Disable comms")
+  field(PINI, "YES")
+  field(VAL, "$(DISABLE=0)")
+  field(OMSL, "supervisory")
+  field(ZNAM, "COMMS ENABLED")
+  field(ONAM, "COMMS DISABLED")
+}
+
+################################################################
+# Read records
+################################################################
+
+## 
+## Read the ID string from the device.
+##
+record(stringin, "$(P):ID") {
+  field(DESC, "The device ID")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto getID $(PORT) $(ADDR)")
+  field(SCAN, "Passive")
+  field(PINI, "YES")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:ID CP")
+}

@@ -252,6 +252,83 @@ class LkshtempStreamInterface(StreamInterface):
     def set_inname(self, input, value):
         self.device.set_input_sensor_name(input, value)
 
+########## 340 ######################   
+
+    def get_temperature_a(self):
+        return self._device.temp_a
+
+    def get_temperature_b(self):
+        return self._device.temp_b
+
+    def get_temperature_c(self):
+        return self._device.temp_c
+
+    def get_temperature_d(self):
+        return self._device.temp_d
+
+    def get_measurement_a(self):
+        return self._device.measurement_a
+
+    def get_measurement_b(self):
+        return self._device.measurement_b
+
+    def get_measurement_c(self):
+        return self._device.measurement_c
+
+    def get_measurement_d(self):
+        return self._device.measurement_d
+
+    def set_tset(self, val):
+        self._device.tset = float(val)
+
+    def get_tset(self):
+        return self._device.tset
+
+    def set_pid(self, p, i, d):
+        self._device.p, self._device.i, self._device.d = p, i, d
+
+    def get_pid(self):
+        return "{},{},{}".format(self._device.p, self._device.i, self._device.d)
+
+    def get_pid_mode(self):
+        return self._device.pid_mode
+
+    def set_pid_mode(self, mode):
+        if not 1 <= mode <= 6:
+            raise ValueError("Mode must be 1-6")
+        self._device.pid_mode = mode
+
+    def get_control_mode(self):
+        return "{},{},{},{}".format(_CONTROL_CHANNEL, _SENSOR_UNITS, 1 if self._device.loop_on else 0, _POWERUPENABLE)
+
+    def set_control_mode(self, val):
+        self._device.loop_on = bool(val)
+
+    def set_temp_limit(self, val):
+        self._device.max_temp = val
+
+    def get_temp_limit(self):
+        return "{},0,0,0,0".format(self._device.max_temp)
+
+    def get_heater_output(self):
+        return "{:.2f}".format(self._device.heater_output)
+
+    def get_heater_range(self):
+        return self._device.heater_range
+
+    def set_heater_range(self, val):
+        if not 0 <= val <= 5:
+            raise ValueError("Heater range must be 0-5")
+        self._device.heater_range = val
+
+    def get_excitation_a(self):
+        return self._device.excitationa
+
+    def set_excitation_a(self, val):
+        if not 0 <= val <= 12:
+            raise ValueError("Excitations range must be 0-12")
+        self._device.excitationa = val
+
 ########## 372 ######################
 
     def set_tset(self, temperature):
