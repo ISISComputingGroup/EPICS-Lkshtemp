@@ -14,6 +14,8 @@ class LkshtempStreamInterface(StreamInterface):
         super(LkshtempStreamInterface, self).__init__()
         # Commands that we expect via serial during normal operation
         self.commands = {
+            # Common Commands
+
             # Getters
             CmdBuilder(self.get_id).escape("*IDN?").eos().build(),  # Get ID
             CmdBuilder(self.get_aout).escape("AOUT? ").int().eos().build(), # Analog Output Data Query; Returns the percentage of output of the analog output.        
@@ -38,30 +40,81 @@ class LkshtempStreamInterface(StreamInterface):
 
 
             # Setters
-
-                                                                               
+                                                             
             CmdBuilder(self.set_tset).escape("SETP ").int().escape(",").float().eos().build(), # Set Setpoint
             CmdBuilder(self.set_range).escape("RANGE ").int().escape(",").int().eos().build(), # Set Heater Range
             CmdBuilder(self.set_ramp).escape("RAMP ").int().escape(",").int().escape(",").float().eos().build(), #Control Loop Ramp Cmd
             CmdBuilder(self.set_mout).escape("MOUT ").int().escape(",").float().eos().build(), # Control Loop MHP Output Cmd
             CmdBuilder(self.set_pid).escape("PID ").int().escape(",").float().escape(",").float().escape(",").float().eos().build(), # Control Loop PID Values Cmd
-            
-
-
-
+ 
             #########################
             # 336 Commands
-
+            
+            # Getters
             CmdBuilder(self.get_om).escape("OUTMODE? ").int().eos().build(),
             CmdBuilder(self.get_inname).escape("INNAME? ").string().eos().build(),
             
-            
-
-            
-            
-            
+            # Setters
             CmdBuilder(self.set_outmode).escape("OUTMODE ").int().escape(",").int().escape(",").int().escape(",").int().eos().build(),
-            CmdBuilder(self.set_inname).escape("INNAME ").string().escape(",").escape('"').string().escape('"').eos().build()
+            CmdBuilder(self.set_inname).escape("INNAME ").string().escape(",").escape('"').string().escape('"').eos().build(),
+
+            #########################
+            # 340 Commands
+
+            CmdBuilder("get_temperature_a").escape("KRDG? 0").eos().build(),
+            CmdBuilder("get_temperature_b").escape("KRDG? 1").eos().build(),
+            CmdBuilder("get_temperature_c").escape("KRDG? 2").eos().build(),
+            CmdBuilder("get_temperature_d").escape("KRDG? 3").eos().build(),
+
+            CmdBuilder("get_measurement_a").escape("SRDG? 0").eos().build(),
+            CmdBuilder("get_measurement_b").escape("SRDG? 1").eos().build(),
+            CmdBuilder("get_measurement_c").escape("SRDG? 2").eos().build(),
+            CmdBuilder("get_measurement_d").escape("SRDG? 3").eos().build(),
+
+            CmdBuilder("set_tset").escape("SETP {},".format(_CONTROL_CHANNEL_INDEX)).float().eos().build(),
+            CmdBuilder("get_tset").escape("SETP? {}".format(_CONTROL_CHANNEL_INDEX)).eos().build(),
+
+            CmdBuilder("set_pid").escape("PID {},".format(_CONTROL_CHANNEL_INDEX)).float().escape(",").float().escape(",").int().eos().build(),
+            CmdBuilder("get_pid").escape("PID? {}".format(_CONTROL_CHANNEL_INDEX)).eos().build(),
+
+            CmdBuilder("set_pid_mode").escape("CMODE {},".format(_CONTROL_CHANNEL_INDEX)).int().eos().build(),
+            CmdBuilder("get_pid_mode").escape("CMODE? {}".format(_CONTROL_CHANNEL_INDEX)).eos().build(),
+
+            CmdBuilder("set_control_mode")
+            .escape("CSET {},{},{},".format(_CONTROL_CHANNEL_INDEX, _CONTROL_CHANNEL, _SENSOR_UNITS)).int()
+            .escape(",{}".format(_POWERUPENABLE)).eos().build(),
+            CmdBuilder("get_control_mode").escape("CSET? {}".format(_CONTROL_CHANNEL_INDEX)).eos().build(),
+
+            CmdBuilder("set_temp_limit").escape("CLIMIT {},".format(_CONTROL_CHANNEL_INDEX)).float().eos().build(),
+            CmdBuilder("get_temp_limit").escape("CLIMIT? {}".format(_CONTROL_CHANNEL_INDEX)).eos().build(),
+
+            CmdBuilder("get_heater_output").escape("HTR?").eos().build(),
+
+            CmdBuilder("set_heater_range").escape("RANGE ").int().eos().build(),
+            CmdBuilder("get_heater_range").escape("RANGE?").eos().build(),
+
+            CmdBuilder("get_excitation_a").escape("INTYPE? A").eos().build(),
+            CmdBuilder("set_excitation_a").escape("INTYPE A, 1, , , , ").int().eos().build(),
+
+            #########################
+            # 372 Commands
+
+            CmdBuilder("get_tset").escape("SETP? 0").eos().build(),
+            CmdBuilder("set_tset").escape("SETP 0 ").float().eos().build(),
+            CmdBuilder("get_temperature").escape("RDGK? A").eos().build(),
+            CmdBuilder("get_resistance").escape("RDGR? A").eos().build(),
+
+            CmdBuilder("get_heater_range").escape("RANGE? 0").eos().build(),
+            CmdBuilder("set_heater_range").escape("RANGE 0,").int().eos().build(),
+
+            CmdBuilder("get_heater_power").escape("HTR?").eos().build(),
+
+            CmdBuilder("get_pid").escape("PID? ").optional("0").eos().build(),
+            CmdBuilder("set_pid").escape("PID ").float().escape(",").float().escape(",").float().eos().build(),
+
+            CmdBuilder("get_outmode").escape("OUTMODE? 0").eos().build(),
+            CmdBuilder("set_outmode").escape("OUTMODE 0,").int().escape(",").int().escape(",").int().escape(",").int().escape(",").int().escape(",").int().eos().build(),
+    
 
         }
 
@@ -75,6 +128,8 @@ class LkshtempStreamInterface(StreamInterface):
 
         """
         self.log.error("An error occurred at request " + repr(request) + ": " + repr(error))
+    
+    ########## 332 ######################
 
     def catch_all(self, command):
         pass
@@ -90,3 +145,156 @@ class LkshtempStreamInterface(StreamInterface):
     
     def get_range(self, output):
         return self.device.get_output_range(output)
+    
+    ########## 336 ######################
+
+    @conditional_reply("connected")
+    def get_id(self):
+        return "LSCI,{}".format(self.device.id)
+
+    @conditional_reply("connected")
+    def get_htr(self, output):
+        return self.device.get_output_heater_value(output)
+
+    @conditional_reply("connected")
+    def get_aout(self, output):
+        return self.device.get_output_analog_output(output)
+
+    @conditional_reply("connected")
+    def get_setp(self, output):
+        return self.device.get_output_setpoint(output)
+
+    @conditional_reply("connected")
+    def get_krdg(self, input):
+        return self.device.get_input_kelvin_temperature(input)
+
+    @conditional_reply("connected")
+    def get_srdg(self, input):
+        return self.device.get_input_voltage_input(input)
+
+    @conditional_reply("connected")
+    def get_range(self, output):
+        return self.device.get_output_range(output)
+
+    @conditional_reply("connected")
+    def get_ramp(self, output):
+        return self.device.get_output_ramp(output)
+
+    @conditional_reply("connected")
+    def get_mout(self, output):
+        return self.device.get_output_manual_value(output)
+
+    @conditional_reply("connected")
+    def get_pid(self, output):
+        return self.device.get_pid(output)
+
+    @conditional_reply("connected")
+    def get_om(self, output):
+        return self.device.get_output_mode(output)
+
+    @conditional_reply("connected")
+    def get_inname(self, input):
+        return self.device.get_input_sensor_name(input)
+
+    @conditional_reply("connected")
+    def get_alarmst(self, input):
+        return self.device.get_input_alarm_status(input)
+
+    @conditional_reply("connected")
+    def get_alarm(self, input):
+        return self.device.get_input_alarm(input)
+
+    @conditional_reply("connected")
+    def get_rdgst(self, input):
+        return self.device.get_input_reading_status(input)
+
+    @conditional_reply("connected")
+    def get_htrst(self, output):
+        return self.device.get_output_heater_status(output)
+
+    @conditional_reply("connected")
+    def get_incrv(self, input):
+        return self.device.get_input_curve_number(input)
+
+    @conditional_reply("connected")
+    def get_crvhdr(self, _):
+        return self.device.get_input_curve_header()
+
+    @conditional_reply("connected")
+    def get_intype(self, input):
+        return self.device.get_input_type(input)
+
+    @conditional_reply("connected")
+    def set_setp(self, output, value):
+        self.device.set_output_setpoint(output, value)
+
+    @conditional_reply("connected")
+    def set_range(self, output, value):
+        self.device.set_output_range(output, value)
+
+    @conditional_reply("connected")
+    def set_ramp(self, output, status, rate):
+        self.device.set_output_ramp(output, status, rate)
+
+    @conditional_reply("connected")
+    def set_mout(self, output, value):
+        self.device.set_output_manual_value(output, value)
+
+    @conditional_reply("connected")
+    def set_pid(self, output, p, i, d):
+        self.device.set_pid(output, p, i, d)
+
+    @conditional_reply("connected")
+    def set_outmode(self, output, mode, control_input, powerup):
+        self.device.set_output_mode(output, mode, control_input, powerup)
+
+    @conditional_reply("connected")
+    def set_inname(self, input, value):
+        self.device.set_input_sensor_name(input, value)
+
+########## 372 ######################
+
+    def set_tset(self, temperature):
+            self._device.temperature = temperature
+
+    @if_connected
+    def get_tset(self):
+        return "{:.3f}".format(self._device.temperature)
+
+    @if_connected
+    def get_temperature(self):
+        return "{:.3f}".format(self._device.temperature)
+
+    @if_connected
+    def get_resistance(self):
+        return "{:.6f}".format(self._device.sensor_resistance)
+
+    def set_heater_range(self, heater_range):
+        self._device.heater_range = heater_range
+
+    @if_connected
+    def get_heater_range(self):
+        return "{:d}".format(self._device.heater_range)
+
+    @if_connected
+    def get_heater_power(self):
+        return "{:.3f}".format(self._device.heater_power)
+
+    @if_connected
+    def get_pid(self):
+        return "{:.6f},{:d},{:d}".format(self._device.p, self._device.i, self._device.d)
+
+    def set_pid(self, p, i, d):
+        self._device.p = p
+        self._device.i = int(round(i))
+        self._device.d = int(round(d))
+
+    @if_connected
+    def get_outmode(self):
+        return "{:d},{:d},{:d},{:d},{:d},{:d}".format(self._device.control_mode, OUTMODE_INPUT, OUTMODE_POWERUPENABLE,
+                                                      OUTMODE_POLARITY, OUTMODE_FILTER, OUTMODE_DELAY)
+
+    def set_outmode(self, control_mode, inp, powerup_enable, polarity, filt, delay):
+        if inp != OUTMODE_INPUT or powerup_enable != OUTMODE_POWERUPENABLE or polarity != OUTMODE_POLARITY or filt != OUTMODE_FILTER or delay != OUTMODE_DELAY:
+            raise ValueError("Invalid parameters sent to set_outmode")
+        self._device.control_mode = control_mode
