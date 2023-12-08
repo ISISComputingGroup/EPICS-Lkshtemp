@@ -1,0 +1,89 @@
+Terminator = CR LF;
+
+getTemp {
+  out "RDGK? A";
+  in "%f";
+}
+
+setTempSP {
+  out "SETP 0 %.3f";
+  
+  # Here we get a whole list of parameters, but only want to change one of them (want to change MODE to 5 - closed loop PID control)
+  # Store the parameters in temporary PVs so that we can send them back (unchanged) to the device.
+  out "OUTMODE? 0";
+  in "%*d,%(\$1_OUTMODE_TEMP:INPUT)[^,],%(\$1_OUTMODE_TEMP:PUP_ENABLE)d,%(\$1_OUTMODE_TEMP:POLARITY)d,%(\$1_OUTMODE_TEMP:FILTER)d,%(\$1_OUTMODE_TEMP:DELAY)d";
+  out "OUTMODE 0,5,%(\$1_OUTMODE_TEMP:INPUT)s,%(\$1_OUTMODE_TEMP:PUP_ENABLE)d,%(\$1_OUTMODE_TEMP:POLARITY)d,%(\$1_OUTMODE_TEMP:FILTER)d,%(\$1_OUTMODE_TEMP:DELAY)d";
+}
+
+getTempSP {
+  out "SETP? 0";
+  in "%f";
+}
+
+getHtrRange {
+  out "RANGE? 0";
+  in "%d";
+}
+
+setHtrRange {
+  out "RANGE 0,%d";
+}
+
+getHtrPower {
+  out "HTR?";
+  in "%f";
+}
+
+getResistance {
+  out "RDGR? A";
+  in "%f";
+}
+
+# We could update all three PID settings at the same time using record redirection, but that is more complex
+# and since this is an IP device we are unlikely to have bandwidth issues - so use the simpler design.
+getP {
+  out "PID? 0";
+  in "%f,%*f,%*f";
+}
+
+getI {
+  out "PID? 0";
+  in "%*f,%f,%*f";
+}
+
+getD {
+  out "PID? 0";
+  in "%*f,%*f,%f";
+}
+
+setP {
+  # Ensure we have up-to-date PID parameters first - otherwise we may send out of date parameters if PID settings
+  # are set very quickly (e.g. from a script)
+  out "PID? 0";
+  in "%(\$1P)f,%(\$1I)f,%(\$1D)f";
+  
+  out "PID %f,%(\$1I)f,%(\$1D)f";
+  wait 100;  # Give the device some time to accept the new setpoints.
+}
+
+
+setI {
+  # Ensure we have up-to-date PID parameters first - otherwise we may send out of date parameters if PID settings
+  # are set very quickly (e.g. from a script)
+  out "PID? 0";
+  in "%(\$1P)f,%(\$1I)f,%(\$1D)f";
+  
+  out "PID %(\$1P)f,%f,%(\$1D)f";
+  wait 100;  # Give the device some time to accept the new setpoints.
+}
+
+
+setD {
+  # Ensure we have up-to-date PID parameters first - otherwise we may send out of date parameters if PID settings
+  # are set very quickly (e.g. from a script)
+  out "PID? 0";
+  in "%(\$1P)f,%(\$1I)f,%(\$1D)f";
+  
+  out "PID %(\$1P)f,%(\$1I)f,%f";
+  wait 100;  # Give the device some time to accept the new setpoints.
+}

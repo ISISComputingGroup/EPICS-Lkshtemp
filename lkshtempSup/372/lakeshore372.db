@@ -1,0 +1,264 @@
+record(bo, "$(P)SIM")
+{
+  field(SCAN, "Passive")
+  field(DTYP, "Soft Channel")
+  field(ZNAM, "NO")
+  field(ONAM, "YES")
+  field(VAL, "$(RECSIM=0)")
+  field(PINI, "YES")
+}
+
+record(bo, "$(P)DISABLE")
+{
+  field(DESC, "Disable comms")
+  field(PINI, "YES")
+  field(VAL, "$(DISABLE=0)")
+  field(OMSL, "supervisory")
+  field(ZNAM, "COMMS ENABLED")
+  field(ONAM, "COMMS DISABLED")
+}
+
+record(ai, "$(P)TEMP") {
+  field(DESC, "Temperature")
+  field(INP, "@lakeshore372.proto getTemp $(PORT)")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+  info(alarm, "LKSH372")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:TEMP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)TEMP:SP") {
+  field(DESC, "Temperature setpoint")
+  field(OUT, "@lakeshore372.proto setTempSP($(P)) $(PORT)")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(DTYP, "stream")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:TEMP:SP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ai, "$(P)TEMP:SP:RBV") {
+  field(DESC, "Temperature setpoint readback")
+  field(INP, "@lakeshore372.proto getTempSP $(PORT)")
+  field(PREC, "3")
+  field(EGU, "K")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:TEMP:SP:RBV")
+  field(SDIS, "$(P)DISABLE")
+}
+
+
+record(mbbi, "$(P)HEATER:RANGE") {
+  field(DESC, "Heater range")
+  field(INP, "@lakeshore372.proto getHtrRange $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  
+  field(ZRST, "Off")
+  field(ONST, "31.6 uA")
+  field(TWST, "100 uA")
+  field(THST, "316 uA")
+  field(FRST, "1 mA")
+  field(FVST, "3.16 mA")
+  field(SXST, "10 mA")
+  field(SVST, "31.6 mA")
+  field(EIST, "100 mA")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:HEATER:RANGE")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(mbbo, "$(P)HEATER:RANGE:SP") {
+  field(DESC, "Heater range setpoint")
+  field(OUT, "@lakeshore372.proto setHtrRange $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "Passive")
+  
+  field(ZRST, "Off")
+  field(ONST, "31.6 uA")
+  field(TWST, "100 uA")
+  field(THST, "316 uA")
+  field(FRST, "1 mA")
+  field(FVST, "3.16 mA")
+  field(SXST, "10 mA")
+  field(SVST, "31.6 mA")
+  field(EIST, "100 mA")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:HEATER:RANGE:SP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ai, "$(P)RESISTANCE") {
+  field(DESC, "Sensor resistance")
+  field(INP, "@lakeshore372.proto getResistance $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  field(EGU, "ohm")
+  field(PREC, "6")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:HEATER:RESISTANCE")
+  field(SDIS, "$(P)DISABLE")
+}
+
+
+record(ai, "$(P)HEATER:POWER") {
+  field(DESC, "Heater power in %")
+  field(INP, "@lakeshore372.proto getHtrPower $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  field(EGU, "%")
+  field(PREC, "3")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:HEATER:POWER")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ai, "$(P)P") {
+  field(DESC, "PID - proportional")
+  field(INP, "@lakeshore372.proto getP $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  field(EGU, "")
+  field(PREC, "3")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:P")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)P:SP") {
+  field(DESC, "PID - proportional SP")
+  field(OUT, "@lakeshore372.proto setP($(P)) $(PORT)")
+  field(DTYP, "stream")
+  field(EGU, "")
+  field(PREC, "3")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:P:SP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ai, "$(P)I") {
+  field(DESC, "PID - integral")
+  field(INP, "@lakeshore372.proto getI $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  field(EGU, "")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:I")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)I:SP") {
+  field(DESC, "PID - integral SP")
+  field(OUT, "@lakeshore372.proto setI($(P)) $(PORT)")
+  field(DTYP, "stream")
+  field(EGU, "")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:I:SP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ai, "$(P)D") {
+  field(DESC, "PID - derivative")
+  field(INP, "@lakeshore372.proto getD $(PORT)")
+  field(DTYP, "stream")
+  field(SCAN, "1 second")
+  field(EGU, "")
+  
+  info(archive, "VAL")
+  info(interest, "HIGH")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:D")
+  field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)D:SP") {
+  field(DESC, "PID - derivative SP")
+  field(OUT, "@lakeshore372.proto setD($(P)) $(PORT)")
+  field(DTYP, "stream")
+  field(EGU, "")
+  
+  info(archive, "VAL")
+    
+  field(SIML, "$(P)SIM")
+  field(SIOL, "$(P)SIM:D:SP")
+  field(SDIS, "$(P)DISABLE")
+}
+
+
+# Temporary records for OUTMODE - see setTempSP protocol for explanation.
+
+record(stringout, "$(P)_OUTMODE_TEMP:INPUT") {}
+record(longout, "$(P)_OUTMODE_TEMP:PUP_ENABLE") {}
+record(longout, "$(P)_OUTMODE_TEMP:POLARITY") {}
+record(longout, "$(P)_OUTMODE_TEMP:FILTER") {}
+record(longout, "$(P)_OUTMODE_TEMP:DELAY") {}
+
+
+# Sim records
+
+record(ao, "$(P)SIM:TEMP"){}
+alias("$(P)SIM:TEMP", "$(P)SIM:TEMP:SP")
+alias("$(P)SIM:TEMP", "$(P)SIM:TEMP:SP:RBV")
+
+record(ao, "$(P)SIM:HEATER:POWER"){}
+record(ao, "$(P)SIM:HEATER:RESISTANCE"){}
+
+record(mbbo, "$(P)SIM:HEATER:RANGE"){}
+alias("$(P)SIM:HEATER:RANGE", "$(P)SIM:HEATER:RANGE:SP")
+
+
+record(ao, "$(P)SIM:P"){}
+alias("$(P)SIM:P", "$(P)SIM:P:SP")
+
+record(longout, "$(P)SIM:I"){}
+alias("$(P)SIM:I", "$(P)SIM:I:SP")
+
+record(longout, "$(P)SIM:D"){}
+alias("$(P)SIM:D", "$(P)SIM:D:SP")
