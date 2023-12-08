@@ -48,17 +48,6 @@ class LkshtempStreamInterface(StreamInterface):
             CmdBuilder(self.set_ramp).escape("RAMP ").int().escape(",").int().escape(",").float().eos().build(), #Control Loop Ramp Cmd
             CmdBuilder(self.set_mout).escape("MOUT ").int().escape(",").float().eos().build(), # Control Loop MHP Output Cmd
             CmdBuilder(self.set_pid).escape("PID ").int().escape(",").float().escape(",").float().escape(",").float().eos().build(), # Control Loop PID Values Cmd
- 
-            #########################
-            # 336 Commands
-            
-            # Getters
-            CmdBuilder(self.get_om).escape("OUTMODE? ").int().eos().build(),
-            CmdBuilder(self.get_inname).escape("INNAME? ").string().eos().build(),
-            
-            # Setters
-            CmdBuilder(self.set_outmode).escape("OUTMODE ").int().escape(",").int().escape(",").int().escape(",").int().eos().build(),
-            CmdBuilder(self.set_inname).escape("INNAME ").string().escape(",").escape('"').string().escape('"').eos().build(),
 
         }
 
@@ -73,7 +62,7 @@ class LkshtempStreamInterface(StreamInterface):
         """
         self.log.error("An error occurred at request " + repr(request) + ": " + repr(error))
     
-    ########## 332 ######################
+    ########## Getters ######################
 
     def catch_all(self, command):
         pass
@@ -138,10 +127,6 @@ class LkshtempStreamInterface(StreamInterface):
         return self.device.get_output_mode(output)
 
     @conditional_reply("connected")
-    def get_inname(self, input):
-        return self.device.get_input_sensor_name(input)
-
-    @conditional_reply("connected")
     def get_alarmst(self, input):
         return self.device.get_input_alarm_status(input)
 
@@ -169,6 +154,8 @@ class LkshtempStreamInterface(StreamInterface):
     def get_intype(self, input):
         return self.device.get_input_type(input)
 
+    ########## Setters ######################
+
     @conditional_reply("connected")
     def set_setp(self, output, value):
         self.device.set_output_setpoint(output, value)
@@ -188,11 +175,3 @@ class LkshtempStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def set_pid(self, output, p, i, d):
         self.device.set_pid(output, p, i, d)
-
-    @conditional_reply("connected")
-    def set_outmode(self, output, mode, control_input, powerup):
-        self.device.set_output_mode(output, mode, control_input, powerup)
-
-    @conditional_reply("connected")
-    def set_inname(self, input, value):
-        self.device.set_input_sensor_name(input, value)
