@@ -29,7 +29,6 @@ class LkshtempStreamInterface(StreamInterface):
             CmdBuilder(self.get_range).escape("RANGE? ").int().eos().build(), # Get Output Range 
             CmdBuilder(self.catch_all).arg("^#9.*$").build(),  # Catch-all command for debugging
             CmdBuilder(self.get_htr).escape("HTR? ").int().eos().build(), # Get Heater readout
-            CmdBuilder(self.get_srdg).escape("SRDG? ").string().eos().build(), # Get Sensort Measure Units
             CmdBuilder(self.get_ramp).escape("RAMP? ").int().eos().build(), # Control Loop Ramp Query
             CmdBuilder(self.get_mout).escape("MOUT? ").int().eos().build(), # Control Loop MHP Output Query            
             CmdBuilder(self.get_pid).escape("PID? ").int().eos().build(), # Control Loop PID Values Query
@@ -48,6 +47,7 @@ class LkshtempStreamInterface(StreamInterface):
             CmdBuilder(self.set_ramp).escape("RAMP ").int().escape(",").int().escape(",").float().eos().build(), #Control Loop Ramp Cmd
             CmdBuilder(self.set_mout).escape("MOUT ").int().escape(",").float().eos().build(), # Control Loop MHP Output Cmd
             CmdBuilder(self.set_pid).escape("PID ").int().escape(",").float().escape(",").float().escape(",").float().eos().build(), # Control Loop PID Values Cmd
+            CmdBuilder(self.set_crvhdr).escape("CRVHDR ").int().escape(",").string().escape(",")string().escape(",").int().escape(",").float().escape(",").int().eos().build(), # Curve Header Cmd,
 
         }
 
@@ -64,27 +64,25 @@ class LkshtempStreamInterface(StreamInterface):
     
     ########## Getters ######################
 
-    def catch_all(self, command):
-        pass
-
-    def get_id(self):
-        return "LSCI,{}".format(self.device.id)
-
-    def get_tempK(self, output):
-        return self.device.get_output_setpoint(output)
-
-    def get_tempC(self, output):
-        return self.device.get_output_setpoint(output)
-
-    def get_cmode(self, output):
-        return self.device.get_cmode(output)
-    
-    def get_range(self, output):
-        return self.device.get_output_range(output)
-
     @conditional_reply("connected")
     def get_id(self):
         return "LSCI,{}".format(self.device.id)
+
+    @conditional_reply("connected")
+    def get_tempK(self, output):
+        return self.device.get_output_setpoint(output)
+
+    @conditional_reply("connected")
+    def get_tempC(self, output):
+        return self.device.get_output_setpoint(output)
+
+    @conditional_reply("connected")
+    def get_cmode(self, output):
+        return self.device.get_cmode(output)
+    
+    @conditional_reply("connected")
+    def get_range(self, output):
+        return self.device.get_output_range(output)
 
     @conditional_reply("connected")
     def get_htr(self, output):
@@ -105,10 +103,6 @@ class LkshtempStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def get_srdg(self, input):
         return self.device.get_input_voltage_input(input)
-
-    @conditional_reply("connected")
-    def get_range(self, output):
-        return self.device.get_output_range(output)
 
     @conditional_reply("connected")
     def get_ramp(self, output):
