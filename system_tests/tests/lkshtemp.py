@@ -9,7 +9,7 @@ from utils.test_modes import TestModes
 from utils.testing import get_running_lewis_and_ioc, parameterized_list, skip_if_recsim
 
 
-DEVICE_PREFIX = "LKSH336_01"
+DEVICE_PREFIX = "LKSHTEMP_01"
 
 IOCS = [
     {
@@ -37,7 +37,7 @@ ALARM_PVS = [
     
 ]
 
-class Lksh336Tests(unittest.TestCase):
+class LkshtempTests(unittest.TestCase):
     """
     Tests for the Lkshtemp IOC.
     """
