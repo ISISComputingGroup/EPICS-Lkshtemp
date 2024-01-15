@@ -47,7 +47,7 @@ class LkshtempStreamInterface(StreamInterface):
             CmdBuilder(self.set_ramp).escape("RAMP ").int().escape(",").int().escape(",").float().eos().build(), #Control Loop Ramp Cmd
             CmdBuilder(self.set_mout).escape("MOUT ").int().escape(",").float().eos().build(), # Control Loop MHP Output Cmd
             CmdBuilder(self.set_pid).escape("PID ").int().escape(",").float().escape(",").float().escape(",").float().eos().build(), # Control Loop PID Values Cmd
-            CmdBuilder(self.set_crvhdr).escape("CRVHDR ").int().escape(",").string().escape(",")string().escape(",").int().escape(",").float().escape(",").int().eos().build(), # Curve Header Cmd,
+            CmdBuilder(self.set_crvhdr).escape("CRVHDR ").int().escape(",").string().escape(",").string().escape(",").int().escape(",").float().escape(",").int().eos().build() # Curve Header Cmd,
 
         }
 

@@ -9,7 +9,7 @@ DATA += lksh332.proto
 
 # db and proto for 372
 DB += lakeshore372.db
-DATA += lakeshore372.proto lakeshore372.db
+DATA += lakeshore372.proto 
 
 # db and proto add for 336
 DB += $(patsubst ../%, %, $(wildcard ../*.template))
