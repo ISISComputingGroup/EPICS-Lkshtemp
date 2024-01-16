@@ -1,0 +1,135 @@
+#
+# 	Macros:
+#   P - Prefix for PV name
+#   PORT - Bus/Port Address (eg. ASYN Port).
+#   ADDR - Address on the bus (optional)
+#   TEMPSCAN - SCAN rate for the temperature/voltage readings
+#   SCAN - SCAN rate for non-temperature/voltage parameters.
+#
+# This template is for outputs 1 and 2, which can provide heater power.
+# 
+
+################################################################
+# Read records
+################################################################
+
+## 
+## Read the heater output value.
+##
+record(ai, "$(P):HEATER$(OUT):OUTPUT") {
+  field(DESC, "Output $(OUT) Heater Output Percentage")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(INP, "@ls336.proto $(CMD)($(OUT)) $(PORT) $(ADDR)")
+  field(SCAN, "$(SCAN) second")
+  field(PREC, "1")
+  field(EGU, "%")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:HEATER$(OUT):OUTPUT")
+  info(INTEREST, "HIGH")
+  info(archive, "VAL")
+}
+
+## 
+## Define the strings and values for this record.
+## IMPORTANT: the rest of the record is defined in the output file, which
+## contains records common to all output types
+##
+record(mbbi, "$(P):HEATER$(OUT):RANGE") {
+  field(ZRST, "Off")
+  field(ONST, "Low")
+  field(TWST, "Medium")
+  field(THST, "High")
+}
+
+##
+## Define the strings and values for this record.
+## IMPORTANT: the rest of the record is defined in the output file, which
+## contains records common to all output types
+##
+record(mbbi, "$(P):OUT_MODE$(OUT)") {
+  field(ZRST, "Off")
+  field(ONST, "Closed Loop PID")
+  field(TWST, "Zone")
+  field(THST, "Open Loop")
+}
+
+## 
+## Define the strings and values for this record.
+## IMPORTANT: the rest of the record is defined in the output file, which
+## contains records common to all output types
+##
+record(mbbo, "$(P):HEATER$(OUT):RANGE:SP") {
+  field(ZRST, "Off")
+  field(ONST, "Low")
+  field(TWST, "Medium")
+  field(THST, "High")
+}
+
+##
+## Define the strings and values for this record.
+## IMPORTANT: the rest of the record is defined in the output file, which
+## contains records common to all output types
+##
+record(mbbo, "$(P):OUT_MODE$(OUT):SP") {
+  field(ZRST, "Off")
+  field(ONST, "Closed Loop PID")
+  field(TWST, "Zone")
+  field(THST, "Open Loop")
+}
+
+##
+## Read the heater status
+##
+record(longin, "$(P):HEATER$(OUT):RAW_STAT") {
+  field(DESC, "Raw Heater Status Output $(OUT)")
+  field(DTYP, "stream")
+  field(SDIS, "$(P):DISABLE")
+  field(SCAN, "$(SCAN) second")  
+  field(INP, "@ls336.proto getHTRST($(OUT)) $(PORT) $(ADDR)")
+  field(FLNK, "$(P):HEATER$(OUT):STAT_CALC")
+  field(SIML, "$(P):SIM")
+  field(SIOL, "$(P):SIM:HEATER$(OUT):RAW_STAT")
+  info(archive, "VAL")
+}
+
+##
+## Cache the heater status because this is cleared on a read on the controller.
+##
+record(calcout, "$(P):HEATER$(OUT):STAT_CALC") {
+  field(INPA, "$(P):HEATER$(OUT):RAW_STAT")
+  field(CALC, "A!=0?A:0")
+  field(DOPT, "Use CALC")
+  field(OOPT, "When Non-zero")
+  field(OUT, "$(P):HEATER$(OUT):STAT.RVAL PP")
+}
+
+##
+## Caches the heater status
+##
+record(mbbi, "$(P):HEATER$(OUT):STAT") {
+  field(DESC, "Output $(OUT) Heater Status")
+  field(DTYP, "Raw Soft Channel")
+  field(ZRST, "No Error")
+  field(ZRVL, "0")
+  field(ONST, "Open Load")
+  field(ONVL, "1")
+  field(TWST, "Short/Compliance")
+  field(TWVL, "2")
+  field(VAL, "0")
+  field(PINI, "YES")
+  field(ONSV, "MAJOR")
+  field(TWSV, "MAJOR")
+  info(INTEREST, "HIGH")
+}
+
+##
+## Provide record to reset the cached value
+##
+record(bo, "$(P):HEATER$(OUT):STAT_RESET") {
+  field(DESC, "Reset Heater Status Output $(OUT)")
+  field(VAL, "0")
+  field(OUT, "$(P):HEATER$(OUT):STAT.RVAL PP")
+  info(INTEREST, "HIGH")
+}
+

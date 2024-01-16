@@ -1,0 +1,43 @@
+getIDN {
+    out "*IDN?";
+    in "%\$1[^\r\n]";
+    ExtraInput = Ignore;
+}
+
+cmd {
+    out "\$1";
+}
+
+
+#Clears the bits in the status byte register and standard event 
+#status register and terminates all pending operations. Clears
+#the interface, but not the controller. The related controller
+#command is *RST
+cls {
+    out "*CLS";
+}
+
+#Each bit is assigned a bit weighting and represents the enable/
+#disable mask of the corresponding event flag bit in the Standard
+#Event Status Register. To enable an event flag bit, send the 
+#command QESE with the sum of the bit weighting for each desired bit. 
+#Refer to Paragraph 6.1.3.2 for a list of event flags. 
+ese {
+    out "*ESE"
+}
+
+#####################################################################
+# Get functions
+#####################################################################
+
+getIDN {
+    out "*IDN?";
+    in "%\$1[^\r\n]";
+    ExtraInput = Ignore;
+}
+
+getKRDG {
+    out "KRDG?";
+    in "%f";
+}
+

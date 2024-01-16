@@ -1,0 +1,556 @@
+record(bo, "$(P)SIM")
+{
+    field(SCAN, "Passive")
+    field(DTYP, "Soft Channel")
+    field(ZNAM, "NO")
+    field(ONAM, "YES")
+    field(VAL, "$(RECSIM=0)")
+    field(PINI, "YES")
+}
+
+record(bo, "$(P)DISABLE")
+{
+    field(DESC, "Disable comms")
+    field(PINI, "YES")
+    field(VAL, "$(DISABLE=0)")
+    field(OMSL, "supervisory")
+    field(ZNAM, "COMMS ENABLED")
+    field(ONAM, "COMMS DISABLED")
+}
+
+
+# Temperature setpoint
+
+
+record(ao, "$(P)A:TEMP:SP") {
+    field(DESC, "Temperature setpoint")
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setTempA $(PORT)")
+    field(PREC, "5")
+    field(EGU, "K")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:A:TEMP")
+    field(SDIS, "$(P)DISABLE")
+
+    field(FLNK, "$(P)A:TEMP:SP:_FAN PP")
+}
+
+# To allow setting any temperature from genie_python to set TSet.
+# May not always make perfect sense, but neater than forcing one in particular
+# or forcing a separate TSet block.
+alias("$(P)A:TEMP:SP", "$(P)B:TEMP:SP")
+alias("$(P)A:TEMP:SP", "$(P)C:TEMP:SP")
+alias("$(P)A:TEMP:SP", "$(P)D:TEMP:SP")
+
+record(ai, "$(P)A:TEMP:SP:RBV") {
+    field(DESC, "Temperature setpoint readback")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getSetTempA $(PORT)")
+    field(SCAN, "5 second")
+    field(PREC, "5")
+    field(EGU, "K")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:A:TEMP")
+    field(SDIS, "$(P)DISABLE")    
+}
+
+alias("$(P)A:TEMP:SP:RBV", "$(P)B:TEMP:SP:RBV")
+alias("$(P)A:TEMP:SP:RBV", "$(P)C:TEMP:SP:RBV")
+alias("$(P)A:TEMP:SP:RBV", "$(P)D:TEMP:SP:RBV")
+
+record(fanout, "$(P)A:TEMP:SP:_FAN") {
+    field(DESC, "Fanout processing after temp sp")
+    field(SELM, "All")
+    field(LNK0, "$(P)THRESHOLDS:_CALC")
+    field(LNK1, "$(P)A:TEMP:SP:RBV")
+}
+
+
+# PID settings
+
+
+record(ai, "$(P)P") {
+    field(DESC, "PID Proportional")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getP $(PORT)")
+    field(SCAN, "5 second")
+    field(PREC, "3")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:P")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(ao, "$(P)P:SP") {
+    field(DESC, "PID Proportional")
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setP($(P)) $(PORT)")
+    field(PREC, "3")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:P")
+    field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)SIM:P"){}
+
+record(ai, "$(P)I") {
+    field(DESC, "PID Integral")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getI $(PORT)")
+    field(SCAN, "5 second")
+    field(PREC, "3")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:I")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(ao, "$(P)I:SP") {
+    field(DESC, "PID Integral")
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setI($(P)) $(PORT)")
+    field(PREC, "3")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:I")
+    field(SDIS, "$(P)DISABLE")
+}
+
+record(ao, "$(P)SIM:I"){}
+
+record(longin, "$(P)D") {
+    field(DESC, "PID Derivative")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getD $(PORT)")
+    field(SCAN, "5 second")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:D")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(longout, "$(P)D:SP") {
+    field(DESC, "PID Derivative")
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setD($(P)) $(PORT)")
+    field(EGU, "")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:D")
+    field(SDIS, "$(P)DISABLE")
+}
+
+record(longout, "$(P)SIM:D"){}
+
+
+# PID mode
+
+
+record(mbbi, "$(P)PIDMODE") {
+    field(DESC, "PID mode")
+    field(SCAN, "5 second")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getPidMode $(PORT)")
+    
+    field(ZRST, "Manual PID")
+    field(ZRVL, "1")
+    field(ONST, "Zone")
+    field(ONVL, "2")
+    field(TWST, "Open Loop")
+    field(TWVL, "3")
+    field(THST, "Autotune PID")
+    field(THVL, "4")
+    field(FRST, "Autotune PI")
+    field(FRVL, "5")
+    field(FVST, "Autotune P")
+    field(FVVL, "6")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:PIDMODE")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(mbbo, "$(P)PIDMODE:SP") {
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setPidMode $(PORT)")
+    
+    field(ZRST, "Manual PID")
+    field(ZRVL, "1")
+    field(ONST, "Zone")
+    field(ONVL, "2")
+    field(TWST, "Open Loop")
+    field(TWVL, "3")
+    field(THST, "Autotune PID")
+    field(THVL, "4")
+    field(FRST, "Autotune PI")
+    field(FRVL, "5")
+    field(FVST, "Autotune P")
+    field(FVVL, "6")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:PIDMODE")
+    field(SDIS, "$(P)DISABLE")
+    
+    field(FLNK, "$(P)PIDMODE")
+}
+
+record(mbbo, "$(P)SIM:PIDMODE") {}
+
+
+# Control loop on/off
+
+record(bi, "$(P)_CONTROLINPUT") {
+    field(ZNAM, "A")
+    field(ONAM, "B")
+}
+
+record(longin, "$(P)_SENSORUNITS") {}
+record(longin, "$(P)_POWERUPENABLE") {}
+
+record(bi, "$(P)LOOP") {
+    field(DESC, "PID loop on/off")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getLoop($(P)) $(PORT)")
+    field(SCAN, "5 second")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:LOOP")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(bo, "$(P)LOOP:SP") {
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setLoop($(P)) $(PORT)")
+    field(ZNAM, "Off")
+    field(ONAM, "On")
+    field(FLNK, "$(P)LOOP")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:LOOP")
+    field(SDIS, "$(P)DISABLE")
+}
+
+record(bo, "$(P)SIM:LOOP") {}
+
+
+# Max setpoint
+
+
+record(ai, "$(P)TEMP:MAX") {
+    field(DESC, "TSet limit")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getMaxTemp $(PORT)")
+    field(SCAN, "5 second")
+    field(EGU, "K")
+    field(PREC, "5")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:TEMP:MAX")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "MEDIUM")
+    info(archive, "VAL")
+}
+
+record(ao, "$(P)TEMP:MAX:SP") {
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setMaxTemp $(PORT)")
+    field(EGU, "K")
+    field(PREC, "5")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:TEMP:MAX")
+    field(SDIS, "$(P)DISABLE")
+    
+    field(FLNK, "$(P)TEMP:MAX")
+}
+
+record(ao, "$(P)SIM:TEMP:MAX"){}
+
+
+# Heater output
+
+
+record(ai, "$(P)OUTPUT") {
+    field(DESC, "Heater output")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getOutput $(PORT)")
+    field(SCAN, "1 second")
+    field(EGU, "%")
+    field(PREC, "2")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:OUTPUT")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "HIGH")
+    info(archive, "VAL")
+}
+
+record(ao, "$(P)SIM:OUTPUT"){}
+
+
+# Heater range
+
+
+record(mbbi, "$(P)RANGE") {
+    field(DESC, "Heater range")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getRange $(PORT)")
+    field(SCAN, "5 second")
+    
+    field(ZRST, "0%")
+    field(ONST, "0.01%")
+    field(TWST, "0.1%")
+    field(THST, "1%")
+    field(FRST, "10%")
+    field(FVST, "100%")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:RANGE")
+    field(SDIS, "$(P)DISABLE")
+    
+    info(INTEREST, "HIGH")
+    info(archive, "VAL")
+}
+
+record(mbbo, "$(P)RANGE:SP") {
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setRange $(PORT)")
+    
+    field(ZRST, "0%")
+    field(ONST, "0.01%")
+    field(TWST, "0.1%")
+    field(THST, "1%")
+    field(FRST, "10%")
+    field(FVST, "100%")
+    
+    field(FLNK, "$(P)RANGE")
+    
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:RANGE")
+    field(SDIS, "$(P)DISABLE")
+}
+
+record(mbbo, "$(P)SIM:RANGE") {}
+
+# Excitation
+
+record(mbbi, "$(P)EXCITATIONA") {
+    field(DESC, "Excitation Setting")
+    field(DTYP, "stream")
+    field(INP, "@Lakeshore340.proto getExA $(PORT)")
+    field(SCAN, "5 second")
+    field(PINI, "YES")
+
+    # If changing these values please also
+    # change the values in the lakeshore340excitations.h file
+    field(ZRST, "Off")
+    field(ONST, "30 nA")
+    field(TWST, "100 nA")
+    field(THST, "300 nA")
+    field(FRST, "1 uA")
+    field(FVST, "3 uA")
+    field(SXST, "10 uA")
+    field(SVST, "30 uA")
+    field(EIST, "100 uA")
+    field(NIST, "300 uA")
+    field(TEST, "1 mA")
+    field(ELST, "10 mV")
+    field(TVST, "1 mV")
+
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:EXCITATIONA")
+    field(SDIS, "$(P)DISABLE")
+
+    info(INTEREST, "HIGH")
+    info(archive, "VAL")
+}
+
+record(mbbo, "$(P)EXCITATIONA:SP") {
+    field(DESC, "Excitation Setting SP")
+    field(DTYP, "stream")
+    field(OUT, "@Lakeshore340.proto setExA $(PORT)")
+
+    # If changing these values please also
+    # change the values in the lakeshore340excitations.h file
+    field(ZRST, "Off")
+    field(ONST, "30 nA")
+    field(TWST, "100 nA")
+    field(THST, "300 nA")
+    field(FRST, "1 uA")
+    field(FVST, "3 uA")
+    field(SXST, "10 uA")
+    field(SVST, "30 uA")
+    field(EIST, "100 uA")
+    field(NIST, "300 uA")
+    field(TEST, "1 mA")
+    field(ELST, "10 mV")
+    field(TVST, "1 mV")
+
+    field(FLNK, "$(P)EXCITATIONA")
+
+    field(SIML, "$(P)SIM")
+    field(SIOL, "$(P)SIM:EXCITATIONA")
+    field(SDIS, "$(P)DISABLE")
+
+    info(INTEREST, "HIGH")
+    info(archive, "VAL")
+}
+
+record(mbbo, "$(P)SIM:EXCITATIONA"){}
+
+record(waveform, "$(P)THRESHOLDS:FILE")
+{
+   field(SCAN, "Passive")
+   field(FTVL, "CHAR")
+   field(DESC, "Thresholds file") # VAL is set from dbpf in st-common.cmd
+   field(NELM, "200")
+   field(FLNK, "$(P)THRESHOLDS:_CALC")
+}
+
+record(aSub, "$(P)THRESHOLDS:_CALC") {
+    field(DESC, "Calc new excitation from threshold")
+    field(SNAM, "calculateNewExcitationFromThresholds")
+
+    # Inputs
+    # Thresholds file
+    field(INPA, "$(P)THRESHOLDS:FILE")
+    field(FTA,  "CHAR")
+    field(NOA,  "200")
+    # Temperature Setpoint
+    field(INPB, "$(P)A:TEMP:SP")
+    field(FTB,  "DOUBLE")
+    # Old Excitation Value
+    field(INPC, "$(P)THRESHOLDS:EXCITATION")
+    field(FTC,  "ENUM")
+    # Old Thresholds temperature value
+    field(INPD, "$(P)THRESHOLDS:TEMP")
+    field(FTD,  "DOUBLE")
+    # Whether to use the thresholds mechanism
+    field(INPE, "$(P)THRESHOLDS:USE")
+    field(FTE,  "ENUM")
+
+    # Outputs
+    # Excitation Output
+    field(OUTA, "$(P)THRESHOLDS:EXCITATION PP")
+    field(FTVA, "ENUM")
+    # Temperature Output
+    field(OUTB, "$(P)THRESHOLDS:TEMP PP")
+    field(FTVB, "DOUBLE")
+    # File Output
+    field(OUTC, "$(P)THRESHOLDS:ERROR PP")
+    field(FTVC, "ENUM")
+    # Delay change
+    field(OUTD, "$(P)THRESHOLDS:DELAY_CHANGE PP")
+    field(FTVD, "ENUM")
+}
+
+record(mbbo, "$(P)THRESHOLDS:EXCITATION") {
+    field(DESC, "The excitation set by the thresholds")
+
+    # If changing these values please also
+    # change the values in the lakeshore340excitations.h file
+    field(ZRST, "Off")
+    field(ONST, "30 nA")
+    field(TWST, "100 nA")
+    field(THST, "300 nA")
+    field(FRST, "1 uA")
+    field(FVST, "3 uA")
+    field(SXST, "10 uA")
+    field(SVST, "30 uA")
+    field(EIST, "100 uA")
+    field(NIST, "300 uA")
+    field(TEST, "1 mA")
+    field(ELST, "10 mV")
+    field(TVST, "1 mV")
+
+    field(UDFS, "NO_ALARM")
+}
+
+record(bo, "$(P)THRESHOLDS:DELAY_CHANGE") {
+    field(DESC, "Delay writing excitation?")
+    field(ZNAM, "NO")
+    field(ONAM, "YES")
+    field(UDFS, "NO_ALARM")
+}
+
+record(calcout, "$(P)THRESHOLDS:DELAY_CHANGE:FALSE") {
+    field(DESC, "Set DELAY_CHANGE to false")
+    field(CALC, "0")
+    field(OUT, "$(P)THRESHOLDS:DELAY_CHANGE")
+    field(UDFS, "NO_ALARM")
+}
+
+record(calcout, "$(P)THRESHOLDS:EXCITATION:_CALC") {
+    field(DESC, "Write thresh excitation to excitation?")
+    field(SCAN, "1 second")
+    field(INPA, "$(P)THRESHOLDS:DELAY_CHANGE")
+    field(INPB, "$(P)A:TEMP:SP")
+    field(INPC, "$(P)A:TEMP")
+    field(CALC, "C >= B && A")
+    field(OUT, "$(P)THRESHOLDS:EXCITATION:_FORWARD PP")
+    field(OOPT, "When Non-zero")
+    field(UDFS, "NO_ALARM")
+}
+
+record(calcout, "$(P)THRESHOLDS:EXCITATION:_FORWARD") {
+    field(DESC, "Forward thresh excitation to sp")
+    field(INPA, "$(P)THRESHOLDS:EXCITATION")
+    field(CALC, "A")
+    field(OUT, "$(P)EXCITATIONA:SP PP")
+    field(FLNK, "$(P)THRESHOLDS:DELAY_CHANGE:FALSE PP")
+    field(UDFS, "NO_ALARM")
+}
+
+record(ao, "$(P)THRESHOLDS:TEMP") {
+    field(DESC, "Temp selected by thresholds")
+    field(PREC, "5")
+    field(EGU, "K")
+    field(UDFS, "NO_ALARM")
+}
+
+record(mbbo, "$(P)THRESHOLDS:ERROR") {
+    field(DESC, "Error when using the thresholds file")
+    field(ZRST, "No Error")
+    field(ZRSV, "NO_ALARM")
+    field(ONST, "File Not Found")
+    field(ONSV, "MINOR")
+    field(TWST, "Invalid Lines In File")
+    field(TWSV, "MINOR")
+    field(UDFS, "NO_ALARM")
+}
+
+record(bo, "$(P)THRESHOLDS:USE") {
+    field(DESC, "Whether to use the thresholds mechanism")
+    field(ZNAM, "NO")
+    field(ONAM, "YES")
+$(IFUSE_EXCITATION_FILE) field(VAL, "1")
+$(IFNOTUSE_EXCITATION_FILE) field(VAL, "0")
+    field(UDFS, "NO_ALARM")
+}

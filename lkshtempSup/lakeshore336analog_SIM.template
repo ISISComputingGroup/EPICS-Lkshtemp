@@ -1,0 +1,6 @@
+# Simulation records for PVs in lakeshore336analog.template
+#
+#############################################################
+
+record(ai, "$(P):SIM:AOUT$(OUT)") {
+}

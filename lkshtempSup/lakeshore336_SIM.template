@@ -1,0 +1,8 @@
+# Simulation records for PVs in lakeshore336.template
+#
+#############################################################
+
+record(stringin, "$(P):SIM:ID") {
+}
+
+
